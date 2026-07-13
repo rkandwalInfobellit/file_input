@@ -2,8 +2,7 @@ import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 
 import { cn } from "@/lib/utils"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { MinusSignIcon } from "@hugeicons/core-free-icons"
+import { Minus } from "lucide-react"
 
 function InputOTP({
   className,
@@ -75,7 +74,7 @@ function InputOTPSeparator({
       className="flex items-center [&_svg:not([class*='size-'])]:size-4"
       role="separator"
       {...props}>
-      <HugeiconsIcon icon={MinusSignIcon} strokeWidth={2} />
+      <Minus strokeWidth={2} />
     </div>
   );
 }

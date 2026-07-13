@@ -2,8 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner";
-import { HugeiconsIcon } from "@hugeicons/react"
-import { CheckmarkCircle02Icon, InformationCircleIcon, Alert02Icon, MultiplicationSignCircleIcon, Loading03Icon } from "@hugeicons/core-free-icons"
+import { CheckCircle, Info, AlertTriangle, XCircle, Loader2 } from "lucide-react"
 
 const Toaster = ({
   ...props
@@ -16,19 +15,19 @@ const Toaster = ({
       className="toaster group"
       icons={{
         success: (
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />
+          <CheckCircle strokeWidth={2} className="size-4" />
         ),
         info: (
-          <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />
+          <Info strokeWidth={2} className="size-4" />
         ),
         warning: (
-          <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-4" />
+          <AlertTriangle strokeWidth={2} className="size-4" />
         ),
         error: (
-          <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4" />
+          <XCircle strokeWidth={2} className="size-4" />
         ),
         loading: (
-          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
+          <Loader2 strokeWidth={2} className="size-4 animate-spin" />
         ),
       }}
       style={

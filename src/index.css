@@ -1,13 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+@import "@fontsource/titillium-web";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Inter Variable', sans-serif;
+    --font-sans: 'Titillium Web', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,7 +51,7 @@
 
 :root {
   --radius: 0.5rem;
- 
+
   /* Base surfaces — cool slate tint, not pure neutral gray */
   --background: oklch(0.985 0.004 247);
   --foreground: oklch(0.205 0.02 252);
@@ -59,25 +59,25 @@
   --card-foreground: oklch(0.205 0.02 252);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.205 0.02 252);
- 
+
   /* Primary — steel blue, the console's action color */
   --primary:oklch(48.1% 0.194 263.4);
   --primary-foreground: oklch(0.98 0.005 247);
- 
+
   --secondary: oklch(0.955 0.008 250);
   --secondary-foreground: oklch(0.28 0.03 252);
   --muted: oklch(0.955 0.008 250);
   --muted-foreground: oklch(0.5 0.02 252);
   --accent: oklch(0.93 0.02 252);
   --accent-foreground: oklch(0.28 0.03 252);
- 
+
   --destructive: oklch(0.5 0.17 25);
   --destructive-foreground: oklch(0.98 0.005 247);
- 
+
   --border: oklch(0.9 0.01 250);
   --input: oklch(0.9 0.01 250);
   --ring: oklch(0.55 0.07 252);
- 
+
   /* SLA status system — the signature palette. Every duration in the app
      resolves to one of these three states. */
   --status-ready: oklch(0.5 0.11 155);
@@ -88,13 +88,13 @@
   --status-overdue-foreground: oklch(0.98 0.005 25);
   --status-info: oklch(0.42 0.09 252);
   --status-info-foreground: oklch(0.98 0.005 247);
- 
+
   --chart-1: oklch(0.42 0.09 252);
   --chart-2: oklch(0.5 0.11 155);
   --chart-3: oklch(0.68 0.14 65);
   --chart-4: oklch(0.5 0.17 25);
   --chart-5: oklch(0.55 0.03 252);
- 
+
   --sidebar:oklch(95.5% 0 0);
   --sidebar-foreground:oklch(46.8% 0 0);
   --sidebar-primary: oklch(0.6 0.1 252);
@@ -104,7 +104,7 @@
   --sidebar-border:oklch(87% 0 0 / 0.502);
   --sidebar-ring: oklch(0.55 0.07 252);
 }
- 
+
 .dark {
   --background: oklch(0.16 0.015 255);
   --foreground: oklch(0.93 0.01 250);
@@ -112,24 +112,24 @@
   --card-foreground: oklch(0.93 0.01 250);
   --popover: oklch(0.2 0.018 255);
   --popover-foreground: oklch(0.93 0.01 250);
- 
+
   --primary: oklch(0.65 0.1 252);
   --primary-foreground: oklch(0.15 0.02 255);
- 
+
   --secondary: oklch(0.26 0.02 255);
   --secondary-foreground: oklch(0.93 0.01 250);
   --muted: oklch(0.26 0.02 255);
   --muted-foreground: oklch(0.66 0.015 250);
   --accent: oklch(0.28 0.02 255);
   --accent-foreground: oklch(0.93 0.01 250);
- 
+
   --destructive: oklch(0.62 0.18 25);
   --destructive-foreground: oklch(0.98 0.005 25);
- 
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.6 0.08 252);
- 
+
   --status-ready: oklch(0.62 0.13 155);
   --status-ready-foreground: oklch(0.15 0.02 155);
   --status-warning: oklch(0.74 0.14 65);
@@ -138,13 +138,13 @@
   --status-overdue-foreground: oklch(0.98 0.005 25);
   --status-info: oklch(0.65 0.1 252);
   --status-info-foreground: oklch(0.15 0.02 255);
- 
+
   --chart-1: oklch(0.65 0.1 252);
   --chart-2: oklch(0.62 0.13 155);
   --chart-3: oklch(0.74 0.14 65);
   --chart-4: oklch(0.62 0.18 25);
   --chart-5: oklch(0.7 0.02 250);
- 
+
   --sidebar: oklch(0.13 0.015 255);
   --sidebar-foreground: oklch(0.9 0.01 250);
   --sidebar-primary: oklch(0.65 0.1 252);
@@ -154,7 +154,7 @@
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.6 0.08 252);
 }
- 
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -175,7 +175,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
- 
+
   --color-status-ready: var(--status-ready);
   --color-status-ready-foreground: var(--status-ready-foreground);
   --color-status-warning: var(--status-warning);
@@ -184,13 +184,13 @@
   --color-status-overdue-foreground: var(--status-overdue-foreground);
   --color-status-info: var(--status-info);
   --color-status-info-foreground: var(--status-info-foreground);
- 
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
- 
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -199,16 +199,16 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
- 
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
- 
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "Courier New", monospace;
 }
- 
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -220,4 +220,3 @@
     @apply font-sans;
   }
 }
- 

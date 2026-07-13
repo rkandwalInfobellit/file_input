@@ -3,8 +3,7 @@ import { DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeftIcon, ArrowRightIcon, ArrowDownIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft, ArrowRight, ArrowDown } from "lucide-react"
 
 function Calendar({
   className,
@@ -113,8 +112,7 @@ function Calendar({
         Chevron: ({ className, orientation, ...props }) => {
           if (orientation === "left") {
             return (
-              <HugeiconsIcon
-                icon={ArrowLeftIcon}
+              <ArrowLeft
                 strokeWidth={2}
                 className={cn("size-4", className)}
                 {...props} />
@@ -123,8 +121,7 @@ function Calendar({
 
           if (orientation === "right") {
             return (
-              <HugeiconsIcon
-                icon={ArrowRightIcon}
+              <ArrowRight
                 strokeWidth={2}
                 className={cn("size-4", className)}
                 {...props} />
@@ -132,8 +129,7 @@ function Calendar({
           }
 
           return (
-            <HugeiconsIcon
-              icon={ArrowDownIcon}
+            <ArrowDown
               strokeWidth={2}
               className={cn("size-4", className)}
               {...props} />
