@@ -108,66 +108,7 @@ function ValidationRow({ row, field, message, mono }) {
 export default function UploadValidatePage() {
   const [approvalMode, setApprovalMode] = useState("independent");
 
-  return (
-    <div
-      className="min-h-screen w-full flex flex-col font-sans"
-      style={{ backgroundColor: tokens.background, color: tokens.foreground }}
-    >
-      {/* Top bar */}
-      <header className="h-16 shrink-0 bg-black flex items-center justify-between px-6">
-        <div className="flex items-center gap-1">
-          <span className="text-white font-extrabold text-xl tracking-tight">AMD</span>
-          <span className="text-white text-lg -ml-0.5">⊿</span>
-        </div>
-        <div className="flex items-center gap-5 text-white">
-          <Play size={18} fill="white" />
-          <div className="relative">
-            <Bell size={18} />
-            <span className="absolute -top-2 -right-2 bg-red-600 text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-              197
-            </span>
-          </div>
-          <Headphones size={18} />
-          <div className="flex items-center gap-2 text-sm">
-            <UserCircle2 size={20} />
-            <span>testuser@infobellit.com</span>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside
-          className="w-60 shrink-0 border-r px-3 py-5"
-          style={{ backgroundColor: tokens.sidebar, borderColor: tokens.border }}
-        >
-          <ul className="space-y-0.5">
-            {navItems.map(({ label, icon: Icon, active, badge }) => (
-              <li key={label}>
-                <button
-                  type="button"
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
-                    active ? "bg-black text-white font-semibold" : "text-slate-700 hover:bg-black/5"
-                  }`}
-                >
-                  <Icon size={16} className="shrink-0" />
-                  <span className="flex-1 text-left">{label}</span>
-                  {badge != null && (
-                    <span
-                      className="text-white text-[11px] font-semibold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center"
-                      style={{ backgroundColor: tokens.statusOverdue }}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 px-10 py-8">
+  return (  <section className="flex-1 px-10 py-8">
           {/* Page header */}
           <div className="mb-7">
             <div className="text-xs font-bold tracking-wider mb-1" style={{ color: tokens.primary }}>
@@ -443,8 +384,6 @@ export default function UploadValidatePage() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+        </section> 
   );
 }

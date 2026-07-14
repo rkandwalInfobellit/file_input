@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { Plus } from "lucide-react"
 
@@ -14,24 +14,27 @@ import {
   setAppFilter,
   setCloudFilter,
   setStatusFilter,
-  CLOUDS,
 } from "@/store/slice/fileCatalog.slice"
+import { fetchFilterOptions } from "@/store/slice/filterOptions.slice"
 import { selectFileCatalogState, selectFilteredFiles } from "@/store/selectors/fileCatalog.selectors"
+import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors"
 import { navigateTo, PAGE } from "@/store/slice/navigation.slice"
 
 export default function FileCatalogPage() {
   const dispatch = useDispatch()
   const filteredFiles = useSelector(selectFilteredFiles) ?? []
-  const { files: allFiles, fetchStatus, error, search, filters } = useSelector(selectFileCatalogState)
+  const { fetchStatus, error, search, filters } = useSelector(selectFileCatalogState)
+  const { categories, apps, clouds, statuses, fetchStatus: optionsFetchStatus } = useSelector(selectFilterOptions)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     if (fetchStatus === "idle") dispatch(fetchFiles())
   }, [fetchStatus, dispatch])
 
-  // Derived from allFiles so options never shrink when filters are active
-  const categories = [...new Set(allFiles.map((f) => f.category))]
-  const apps       = [...new Set(allFiles.flatMap((f) => f.app))]
-  const statuses   = [...new Set(allFiles.map((f) => f.status).filter(Boolean))]
+  useEffect(() => {
+    if (optionsFetchStatus === "idle") dispatch(fetchFilterOptions())
+  }, [optionsFetchStatus, dispatch])
 
   const tableFilters = {
     search: {
@@ -40,31 +43,31 @@ export default function FileCatalogPage() {
     },
     dropdowns: [
       {
-        label:         "Category",
-        value:         filters.category,
-        setValue:      (v) => dispatch(setCategoryFilter(v)),
-        options:       categories,
+        label: "Category",
+        value: filters.category,
+        setValue: (v) => dispatch(setCategoryFilter(v)),
+        options: categories,
         isMultiSelect: true,
       },
       {
-        label:         "App",
-        value:         filters.app,
-        setValue:      (v) => dispatch(setAppFilter(v)),
-        options:       apps,
+        label: "App",
+        value: filters.app,
+        setValue: (v) => dispatch(setAppFilter(v)),
+        options: apps,
         isMultiSelect: true,
       },
       {
-        label:         "Cloud",
-        value:         filters.cloud,
-        setValue:      (v) => dispatch(setCloudFilter(v)),
-        options:       CLOUDS,
+        label: "Cloud",
+        value: filters.cloud,
+        setValue: (v) => dispatch(setCloudFilter(v)),
+        options: clouds,
         isMultiSelect: true,
       },
       {
-        label:         "Status",
-        value:         filters.status,
-        setValue:      (v) => dispatch(setStatusFilter(v)),
-        options:       statuses,
+        label: "Status",
+        value: filters.status,
+        setValue: (v) => dispatch(setStatusFilter(v)),
+        options: statuses,
         isMultiSelect: true,
       },
     ],
@@ -92,6 +95,7 @@ export default function FileCatalogPage() {
         loading={fetchStatus === "loading" && filteredFiles.length === 0}
         error={fetchStatus === "failed" ? (error ?? "Failed to load files.") : null}
         emptyMessage="No files match your search or filters."
+        pagination={{ pageIndex, pageSize, setPageIndex, setPageSize }}
       />
     </section>
   )

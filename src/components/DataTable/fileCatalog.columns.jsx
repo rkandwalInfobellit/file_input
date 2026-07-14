@@ -1,12 +1,7 @@
-import { MoreHorizontal, Pencil } from "lucide-react"
+import { Download } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const CATEGORY_VARIANT = {
   "Business Rules": "secondary",
@@ -48,7 +43,7 @@ export const fileCatalogColumns = [
     cell: ({ row }) => {
       const category = row.getValue("category")
       return (
-        <Badge variant={CATEGORY_VARIANT[category] ?? "outline"}>
+        <Badge variant="outline" color="secondary">
           {category}
         </Badge>
       )
@@ -58,7 +53,7 @@ export const fileCatalogColumns = [
     accessorKey: "app",
     header: "App",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.getValue("app").join(", ")}</span>
+      <span >{row.getValue("app").join(" / ")}</span>
     ),
   },
   {
@@ -69,9 +64,7 @@ export const fileCatalogColumns = [
       if (!clouds?.length) return <span className="text-muted-foreground">—</span>
       return (
         <div className="flex gap-1 flex-wrap">
-          {clouds.map((c) => (
-            <Badge key={c} variant="outline" className="font-mono text-xs">{c}</Badge>
-          ))}
+          {clouds.join (" / ")}
         </div>
       )
     },
@@ -80,7 +73,7 @@ export const fileCatalogColumns = [
     accessorKey: "version",
     header: "Version",
     cell: ({ row }) => (
-      <Badge variant="outline" className="font-mono">
+      <Badge variant="outline" color="primary">
         {row.getValue("version")}
       </Badge>
     ),
@@ -101,21 +94,41 @@ export const fileCatalogColumns = [
   {
     id: "actions",
     header: "",
-    cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => console.log("edit", row.original.id)}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => {
+      const fileUrl = row.original.file
+      const fileName = row.original.name
+      return (
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!fileUrl}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(fileUrl)
+                    const blob = await res.blob()
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement("a")
+                    a.href = url
+                    a.download = fileName
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch {
+                    window.open(fileUrl, "_blank")
+                  }
+                }}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download {fileName}</TooltipContent>
+          </Tooltip>
+        </div>
+      )
+    },
   },
 ]
 
