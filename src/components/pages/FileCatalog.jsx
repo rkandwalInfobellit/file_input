@@ -39,16 +39,10 @@ export default function FileCatalogPage() {
   const tableFilters = {
     search: {
       value: search,
+      placeholder: "Search files...",
       setValue: (v) => dispatch(setSearch(v)),
     },
     dropdowns: [
-      {
-        label: "Category",
-        value: filters.category,
-        setValue: (v) => dispatch(setCategoryFilter(v)),
-        options: categories,
-        isMultiSelect: true,
-      },
       {
         label: "App",
         value: filters.app,
@@ -64,6 +58,13 @@ export default function FileCatalogPage() {
         isMultiSelect: true,
       },
       {
+        label: "Category",
+        value: filters.category,
+        setValue: (v) => dispatch(setCategoryFilter(v)),
+        options: categories,
+        isMultiSelect: true,
+      },
+      {
         label: "Status",
         value: filters.status,
         setValue: (v) => dispatch(setStatusFilter(v)),
@@ -73,8 +74,35 @@ export default function FileCatalogPage() {
     ],
   }
 
+  const fileFilter = [
+    {
+      name: "All",
+      value: 25,
+      active: true,
+      onClick: () => {
+        console.log("All Files fetched");
+      }
+    },
+    {
+      name: "My Files",
+      value: 15,
+      active: false,
+      onClick: () => {
+        console.log("My Files fetched");
+      }
+    },
+    {
+      name: "Requests",
+      value: 10,
+      active: false,
+      onClick: () => {
+        console.log("Requested files fetched");
+      }
+    },
+  ]
+
   return (
-    <section className="flex flex-col gap-6 px-10 py-8">
+    <section className="flex flex-col gap-4 px-4 py-1">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-3xl font-extrabold mb-2">File Catalog</h1>
@@ -87,7 +115,9 @@ export default function FileCatalogPage() {
           Upload new file
         </Button>
       </div>
-
+      <div className="flex gap-2">
+        {fileFilter.map((val) => (<Button key={val.name} variant={val.active ? "default" : "secondary"} className="rounded-xl">{`${val.name} (${val.value})`}</Button>))}
+      </div>
       <DataTable
         columns={fileCatalogColumns}
         data={filteredFiles}

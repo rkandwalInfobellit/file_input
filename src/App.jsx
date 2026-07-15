@@ -25,7 +25,7 @@ export default function App() {
   const Page = PAGE_COMPONENTS[activePage]
 
   return (
-    <main className="flex flex-col min-h-screen bg-background text-foreground">
+    <main className="flex flex-col min-h-screen bg-background text-foreground overflow-auto">
       <Header />
       <SidebarProvider>
         <div className="flex flex-1">

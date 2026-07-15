@@ -1,95 +1,72 @@
-import { Download } from "lucide-react"
+import { Download, Eye } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 const CATEGORY_VARIANT = {
   "Business Rules": "secondary",
-  "Scaler Data":    "secondary",
-  "Remarks":        "secondary",
-  "MRD":            "secondary",
-  "System / EPDW":  "outline",
-  "System / H5":    "outline",
-  "Pricing / AWS":  "default",
+  "Scaler Data": "secondary",
+  "Remarks": "secondary",
+  "MRD": "secondary",
+  "System / EPDW": "outline",
+  "System / H5": "outline",
+  "Pricing / AWS": "default",
 }
 
 export const STATUS_VARIANT = {
-  pending:  "destructive",
+  pending: "destructive",
   inReview: "secondary",
   rejected: "destructive",
-  staged:   "outline",
+  staged: "outline",
   released: "default",
 }
 
 export const STATUS_LABEL = {
-  pending:  "Pending Approval",
+  pending: "Pending Approval",
   inReview: "In Review",
   rejected: "Rejected",
-  staged:   "Staged",
+  staged: "Staged",
   released: "Released",
 }
 
 export const fileCatalogColumns = [
   {
     accessorKey: "name",
-    header: "File",
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue("name")}</span>
-    ),
-  },
-  {
-    accessorKey: "category",
-    header: "Category",
-    cell: ({ row }) => {
-      const category = row.getValue("category")
-      return (
-        <Badge variant="outline" color="secondary">
-          {category}
-        </Badge>
-      )
-    },
+    header: "FILE",
+    cell: ({ row }) => <p className="text-primary font-semibold truncate line-clamp-1 max-w-41.75"> {row.getValue("name") ?? "-"} </p>,
   },
   {
     accessorKey: "app",
-    header: "App",
-    cell: ({ row }) => (
-      <span >{row.getValue("app").join(" / ")}</span>
-    ),
+    header: "APP",
+    cell: ({ row }) => row.getValue("app")?.join(" / ") ?? "-"
   },
   {
     accessorKey: "cloud",
-    header: "Cloud",
-    cell: ({ row }) => {
-      const clouds = row.getValue("cloud")
-      if (!clouds?.length) return <span className="text-muted-foreground">—</span>
-      return (
-        <div className="flex gap-1 flex-wrap">
-          {clouds.join (" / ")}
-        </div>
-      )
-    },
+    header: "CLOUD",
+    cell: ({ row }) => row.getValue("cloud")?.join(" / ") ?? "-"
+  },
+  {
+    accessorKey: "category",
+    header: "FILE TYPE",
+
+    cell: ({ row }) => <p className="truncate line-clamp-1 max-w-36"> {row.getValue("category") ?? "-"} </p>,
   },
   {
     accessorKey: "version",
-    header: "Version",
-    cell: ({ row }) => (
-      <Badge variant="outline" color="primary">
-        {row.getValue("version")}
-      </Badge>
-    ),
+    header: "FILE VERSION",
+  },
+  {
+    accessorKey: "approver",
+    header: "APPROVER",
+  },
+  {
+    accessorKey: "contributor",
+    header: "CONTRIBUTOR",
   },
   {
     accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.getValue("status")
-      if (!status) return <span className="text-sm text-muted-foreground">—</span>
-      return (
-        <Badge variant={STATUS_VARIANT[status] ?? "outline"}>
-          {STATUS_LABEL[status] ?? status}
-        </Badge>
-      )
-    },
+    header: "STATUS",
+    cell: ({ row }) => row.original.status ? <Badge status={row.original.status}>{row.original.status}</Badge> : "-",
   },
   {
     id: "actions",
@@ -99,6 +76,19 @@ export const fileCatalogColumns = [
       const fileName = row.original.name
       return (
         <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                disabled={!fileUrl}
+              >
+                <Eye className="h-4 w-4 text-primary" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View {fileName}</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -121,7 +111,7 @@ export const fileCatalogColumns = [
                   }
                 }}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-4 w-4  text-primary" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Download {fileName}</TooltipContent>
@@ -133,9 +123,9 @@ export const fileCatalogColumns = [
 ]
 
 export const LEGEND = [
-  { status: "released", label: "Released",       desc: "Tagged to a Recommendation Version" },
-  { status: "staged",   label: "Staged",          desc: "Approved, available for tagging" },
-  { status: "inReview", label: "In Review",        desc: "With approvers" },
-  { status: "pending",  label: "Pending Approval", desc: "Awaiting decision" },
-  { status: "rejected", label: "Rejected",         desc: "Returned to contributor" },
+  { status: "released", label: "Released", desc: "Tagged to a Recommendation Version" },
+  { status: "staged", label: "Staged", desc: "Approved, available for tagging" },
+  { status: "inReview", label: "In Review", desc: "With approvers" },
+  { status: "pending", label: "Pending Approval", desc: "Awaiting decision" },
+  { status: "rejected", label: "Rejected", desc: "Returned to contributor" },
 ]

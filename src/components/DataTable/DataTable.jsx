@@ -194,7 +194,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
               <Input
                 value={filters.search.value}
                 onChange={(e) => filters.search.setValue(e.target.value)}
-                placeholder="Search…"
+                placeholder={filters.search.placeholder ??"Search…"}
                 className="pl-9"
               />
             </div>
@@ -219,7 +219,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="text-secondary-foreground">
+                  <TableHead key={header.id} className="text-muted-foreground font-semibold">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
