@@ -184,7 +184,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
   })
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="flex flex-col flex-1 rounded-lg border bg-card">
       {/* Toolbar */}
       {filters && (
         <div className="flex items-center gap-3 p-4 border-b">

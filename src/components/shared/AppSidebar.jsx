@@ -1,4 +1,4 @@
-import { useDispatch, useSelector } from "react-redux"
+import { useNavigate, useLocation } from "react-router-dom"
 import {
   SquareCheckBig,
   FolderOpen,
@@ -16,21 +16,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { PAGE, navigateTo } from "@/store/slice/navigation.slice"
-import { selectActivePage } from "@/store/selectors/navigation.selectors"
+import { ROUTES } from "@/lib/routes"
 
 const NAV_ITEMS = Object.freeze([
-  { page: PAGE.FILE_CATALOG,    label: "File Catalog",      icon: FolderOpen },
-  { page: PAGE.UPLOAD_VALIDATE, label: "Upload & Validate", icon: Upload },
-  { page: PAGE.APPROVALS,       label: "Approvals",         icon: SquareCheckBig },
-  { page: PAGE.VERSIONING,      label: "Versioning",        icon: GitBranch },
-  { page: PAGE.RELEASE,         label: "Release",           icon: Tag },
-  { page: PAGE.CONFIGURATION,   label: "Configuration",     icon: Cog },
+  { route: ROUTES.FILE_CATALOG,    label: "File Catalog",      icon: FolderOpen },
+  { route: ROUTES.UPLOAD_VALIDATE, label: "Upload & Validate", icon: Upload },
+  { route: ROUTES.APPROVALS,       label: "Approvals",         icon: SquareCheckBig },
+  { route: ROUTES.VERSIONING,      label: "Versioning",        icon: GitBranch },
+  { route: ROUTES.RELEASE,         label: "Release",           icon: Tag },
+  { route: ROUTES.CONFIGURATION,   label: "Configuration",     icon: Cog },
 ])
 
 export function AppSidebar() {
-  const dispatch = useDispatch()
-  const activePage = useSelector(selectActivePage)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   return (
     <Sidebar collapsible="none">
@@ -38,11 +37,11 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map(({ page, label, icon: Icon }) => (
-                <SidebarMenuItem key={page}>
+              {NAV_ITEMS.map(({ route, label, icon: Icon }) => (
+                <SidebarMenuItem key={route}>
                   <SidebarMenuButton
-                    isActive={activePage === page}
-                    onClick={() => dispatch(navigateTo(page))}
+                    isActive={location.pathname === route}
+                    onClick={() => navigate(route)}
                   >
                     <Icon />
                     <span>{label}</span>

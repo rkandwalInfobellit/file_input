@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
 import { Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -18,10 +19,11 @@ import {
 import { fetchFilterOptions } from "@/store/slice/filterOptions.slice"
 import { selectFileCatalogState, selectFilteredFiles } from "@/store/selectors/fileCatalog.selectors"
 import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors"
-import { navigateTo, PAGE } from "@/store/slice/navigation.slice"
+import { ROUTES } from "@/lib/routes"
 
 export default function FileCatalogPage() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const filteredFiles = useSelector(selectFilteredFiles) ?? []
   const { fetchStatus, error, search, filters } = useSelector(selectFileCatalogState)
   const { categories, apps, clouds, statuses, fetchStatus: optionsFetchStatus } = useSelector(selectFilterOptions)
@@ -110,7 +112,7 @@ export default function FileCatalogPage() {
             All governed input files for CCA, EIA, and Scaler. Tracked per-application and per-cloud.
           </p>
         </div>
-        <Button size="lg" onClick={() => dispatch(navigateTo(PAGE.UPLOAD_VALIDATE))}>
+        <Button size="lg" onClick={() => navigate(ROUTES.UPLOAD_VALIDATE)}>
           <Plus className="h-4 w-4" />
           Upload new file
         </Button>
