@@ -19,17 +19,16 @@ import {
 import { ROUTES } from "@/lib/routes"
 
 const NAV_ITEMS = Object.freeze([
-  { route: ROUTES.FILE_CATALOG,    label: "File Catalog",      icon: FolderOpen },
-  { route: ROUTES.UPLOAD_VALIDATE, label: "Upload & Validate", icon: Upload },
-  { route: ROUTES.APPROVALS,       label: "Approvals",         icon: SquareCheckBig },
-  { route: ROUTES.VERSIONING,      label: "Versioning",        icon: GitBranch },
-  { route: ROUTES.RELEASE,         label: "Release",           icon: Tag },
-  { route: ROUTES.CONFIGURATION,   label: "Configuration",     icon: Cog },
+  { route: ROUTES.FILE_CATALOG,    label: "File Management",      icon: FolderOpen, subRoutes:[ROUTES.FILE_CATALOG, ROUTES.UPLOAD_VALIDATE] }, 
+  { route: ROUTES.VERSIONING,      label: "Versioning",        icon: GitBranch, subRoutes:[ROUTES.VERSIONING] },
+  { route: ROUTES.RELEASE,         label: "Release",           icon: Tag, subRoutes:[ROUTES.RELEASE] },
+  { route: ROUTES.CONFIGURATION,   label: "Configuration",     icon: Cog, subRoutes:[ROUTES.CONFIGURATION] },
 ])
 
 export function AppSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
+
 
   return (
     <Sidebar collapsible="none">
@@ -37,10 +36,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map(({ route, label, icon: Icon }) => (
+              {NAV_ITEMS.map(({ route, label, subRoutes, icon: Icon }) => (
                 <SidebarMenuItem key={route}>
                   <SidebarMenuButton
-                    isActive={location.pathname === route}
+                    isActive={subRoutes.includes(location.pathname)}
                     onClick={() => navigate(route)}
                   >
                     <Icon />

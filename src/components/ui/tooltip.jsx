@@ -23,7 +23,7 @@ function TooltipTrigger({
 
 function TooltipContent({
   className,
-  side = "top",
+  side = "bottom",
   sideOffset = 4,
   align = "center",
   alignOffset = 0,

@@ -105,17 +105,17 @@ export default function FileCatalogPage() {
 
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex flex-col items-start justify-between">
+        <div className="flex justify-between items-center w-full">
           <h1 className="text-3xl font-extrabold mb-2">File Catalog</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            All governed input files for CCA, EIA, and Scaler. Tracked per-application and per-cloud.
-          </p>
-        </div>
         <Button size="lg" onClick={() => navigate(ROUTES.UPLOAD_VALIDATE)}>
           <Plus className="h-4 w-4" />
           Upload new file
         </Button>
+        </div>
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            All governed input files for CCA, EIA, and Scaler. Tracked per-application and per-cloud.
+          </p>
       </div>
       <div className="flex gap-2">
         {fileFilter.map((val) => (<Button key={val.name} variant={val.active ? "default" : "secondary"} className="rounded-xl">{`${val.name} (${val.value})`}</Button>))}
