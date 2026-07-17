@@ -71,9 +71,10 @@ export const fileCatalogColumns = [
   {
     id: "actions",
     header: "",
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const fileUrl = row.original.file
       const fileName = row.original.name
+      const fileId = row.original.id
       return (
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -83,6 +84,7 @@ export const fileCatalogColumns = [
                 size="icon"
                 className="h-8 w-8"
                 disabled={!fileUrl}
+                onClick={() => table.options.meta?.onView?.(fileId)}
               >
                 <Eye className="h-4 w-4 text-primary" />
               </Button>

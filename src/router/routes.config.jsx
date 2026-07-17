@@ -5,6 +5,7 @@ import PageSkeleton from "@/components/pages/PageSkeleton"
 import NotFoundPage from "@/components/pages/NotFoundPage"
 
 const FileCatalog    = lazy(() => import("@/components/pages/FileCatalog"))
+const FileDetail     = lazy(() => import("@/components/pages/FileDetail"))
 const Uploadvalidate = lazy(() => import("@/components/shared/Uploadvalidate"))
 const Approvals      = lazy(() => import("@/components/pages/Approvals"))
 const Versioning     = lazy(() => import("@/components/pages/Versioning"))
@@ -22,6 +23,7 @@ function wrap(Component) {
 export const routeConfig = [
   { path: "/",                    element: <Navigate to={ROUTES.FILE_CATALOG} replace /> },
   { path: ROUTES.FILE_CATALOG,    element: wrap(FileCatalog) },
+  { path: "/file/:id",            element: wrap(FileDetail) },
   { path: ROUTES.UPLOAD_VALIDATE, element: wrap(Uploadvalidate) },
   { path: ROUTES.APPROVALS,       element: wrap(Approvals) },
   { path: ROUTES.VERSIONING,      element: wrap(Versioning) },

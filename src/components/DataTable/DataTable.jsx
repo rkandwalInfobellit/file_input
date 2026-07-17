@@ -163,10 +163,11 @@ function PaginationBar({ pagination, totalRows, pageCount }) {
 // pagination prop shape: { pageIndex, pageSize, setPageIndex, setPageSize }
 // Omit pagination to disable it.
 // ---------------------------------------------------------------------------
-export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination }) {
+export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination, meta }) {
   const table = useReactTable({
     data,
     columns,
+    meta,
     getCoreRowModel:       getCoreRowModel(),
     getFilteredRowModel:   getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
