@@ -123,6 +123,7 @@ export default function Configuration() {
               placeholder: "Search categories...",
             },
           }}
+          className={"border-none"}
           pagination={{
             pageIndex,
             pageSize,

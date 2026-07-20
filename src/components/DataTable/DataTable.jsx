@@ -30,6 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
@@ -163,11 +164,12 @@ function PaginationBar({ pagination, totalRows, pageCount }) {
 // pagination prop shape: { pageIndex, pageSize, setPageIndex, setPageSize }
 // Omit pagination to disable it.
 // ---------------------------------------------------------------------------
-export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination, meta }) {
+export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination, meta, className="", }) {
   const table = useReactTable({
     data,
     columns,
     meta,
+    
     getCoreRowModel:       getCoreRowModel(),
     getFilteredRowModel:   getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -185,7 +187,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
   })
 
   return (
-    <div className="flex flex-col flex-1 rounded-lg border bg-card">
+    <div className={cn("flex flex-col flex-1 rounded-lg border bg-card", className)}>
       {/* Toolbar */}
       {filters && (
         <div className="flex items-center gap-3 p-4 border-b">
