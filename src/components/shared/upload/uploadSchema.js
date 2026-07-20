@@ -7,7 +7,6 @@ export const uploadSchema = z.object({
   fileCategory: z.string().min(1, "File category is required"),
   changeType: z.string().min(1, "Change type is required"),
   approvers: z.array(z.string()).min(1, "Select at least one approver"),
-  approvalMode: z.enum(["dependent", "independent"]),
   description: z.string().optional(),
   file: z
     .any()

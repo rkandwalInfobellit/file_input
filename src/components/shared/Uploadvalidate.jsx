@@ -6,7 +6,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { Download, ArrowLeft, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FieldLabel, FieldError, Field } from "@/components/ui/field";
 import { Textarea } from "../ui/textarea";
 import { Input } from "../ui/input";
@@ -43,7 +42,6 @@ export default function UploadValidatePage() {
     control,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(uploadSchema),
@@ -54,7 +52,6 @@ export default function UploadValidatePage() {
       fileCategory: "",
       changeType: "",
       approvers: [],
-      approvalMode: "independent",
       description: "",
       file: null,
     },
@@ -63,7 +60,6 @@ export default function UploadValidatePage() {
   const navigate = useNavigate();
 
   const changeType = watch("changeType");
-  const approvalMode = watch("approvalMode");
   const [watchApplication, watchCloud, watchCategory] = watch([
     "application",
     "cloud",
@@ -245,47 +241,6 @@ export default function UploadValidatePage() {
               errors={errors}
               disabled={approverDisabled}
             />
-
-            {/* Approval Mode */}
-            <Field className="mb-6">
-              <FieldLabel className="text-[11px] font-semibold tracking-wider capitalize">
-                APPROVAL MODE
-              </FieldLabel>
-              <RadioGroup
-                value={approvalMode}
-                onValueChange={(val) => setValue("approvalMode", val)}
-                className="space-y-2.5"
-              >
-                {[
-                  {
-                    value: "dependent",
-                    title: "Dependent",
-                    desc: "all selected approvers must approve for final approval; otherwise it stays partially approved.",
-                  },
-                  {
-                    value: "independent",
-                    title: "Independent",
-                    desc: "any one selected approver approving is enough for final approval.",
-                  },
-                ].map((opt) => {
-                  const isSelected = approvalMode === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`flex items-start gap-3 rounded-md border px-4 py-3.5 cursor-pointer transition-colors ${isSelected ? "border-primary bg-primary/5" : "border-border bg-card"}`}
-                    >
-                      <RadioGroupItem value={opt.value} className="mt-1" />
-                      <span className="text-sm leading-relaxed">
-                        <span className="font-semibold capitalize">
-                          {opt.title}
-                        </span>{" "}
-                        — {opt.desc}
-                      </span>
-                    </label>
-                  );
-                })}
-              </RadioGroup>
-            </Field>
 
             {/* File drop zone */}
             <Field>

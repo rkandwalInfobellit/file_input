@@ -5,4 +5,7 @@ export const ROUTES = Object.freeze({
   VERSIONING: "/versioning",
   RELEASE: "/release",
   CONFIGURATION: "/configuration",
+  NOT_AUTHORIZED: "/not-authorized",
+  LOGIN: "/login",
+  NOT_FOUND: "*"
 });

@@ -3,6 +3,9 @@ import { Navigate } from "react-router-dom"
 import { ROUTES } from "@/lib/routes"
 import PageSkeleton from "@/components/pages/PageSkeleton"
 import NotFoundPage from "@/components/pages/NotFoundPage"
+import NotAuthorizedPage from "@/components/pages/NotAuthorizedPage"
+import InternalLoginPage from "@/components/pages/InternalLoginPage"
+import ProtectedRoute from "@/router/ProtectedRoute"
 
 const FileCatalog    = lazy(() => import("@/components/pages/FileCatalog"))
 const FileDetail     = lazy(() => import("@/components/pages/FileDetail"))
@@ -14,9 +17,11 @@ const Configuration  = lazy(() => import("@/components/pages/Configuration"))
 
 function wrap(Component) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Component />
-    </Suspense>
+    <ProtectedRoute>
+      <Suspense fallback={<PageSkeleton />}>
+        <Component />
+      </Suspense>
+    </ProtectedRoute>
   )
 }
 
@@ -29,5 +34,7 @@ export const routeConfig = [
   { path: ROUTES.VERSIONING,      element: wrap(Versioning) },
   { path: ROUTES.RELEASE,         element: wrap(Release) },
   { path: ROUTES.CONFIGURATION,   element: wrap(Configuration) },
-  { path: "*",                    element: <NotFoundPage /> },
+  { path: ROUTES.NOT_AUTHORIZED,  element: <NotAuthorizedPage /> },
+  { path: ROUTES.LOGIN,           element: <InternalLoginPage /> },
+  { path: "*",                    element: <ProtectedRoute><NotFoundPage /></ProtectedRoute> },
 ]
