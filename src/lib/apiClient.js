@@ -38,4 +38,4 @@ class ApiClient {
 }
 
 export const apiClient    = new ApiClient(import.meta.env.VITE_API_URL)
-export const csClient     = new ApiClient(import.meta.env.VITE_COMMON_SERVICE_URL)
+export const csClient     = new ApiClient(import.meta.env.VITE_COMMON_SERVICE_API_URL)
