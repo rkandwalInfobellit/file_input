@@ -4,6 +4,20 @@ export const API_ROUTES = Object.freeze({
   // Auth  (apiClient — VITE_API_URL)
   LOGIN: "/login",
 
+  // Users  (apiClient — VITE_API_URL)
+  USERS_LIST: "/users/list",
+
+  // IFG API  (ifgClient — VITE_IFG_API_URL)
+  CLOUDS_LIST: "/ifgapi/clouds/list",
+
+  // Categories  (apiClient — VITE_API_URL)
+  CATEGORIES_LIST:   "/ifgapi/categories/list",
+  CATEGORIES_DETAIL: "/ifgapi/categories/detail",
+  CATEGORIES_CREATE: "/ifgapi/categories/create",
+  CATEGORIES_UPDATE: "/ifgapi/categories/update",
+  CATEGORIES_DELETE: "/ifgapi/categories/delete",
+
   // Common service  (csClient — VITE_COMMON_SERVICE_URL)
   GET_USER_TOKEN: "/getUserToken",
+  APPLICATIONS: "/csapi/applications",
 })

@@ -48,7 +48,7 @@ function SheetContent({
   className,
   children,
   side = "right",
-  showCloseButton = true,
+  showCloseButton = false,
   ...props
 }) {
   return (

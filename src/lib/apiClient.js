@@ -4,15 +4,16 @@ import Cookies from "js-cookie"
 class ApiClient {
   #client
 
-  constructor(baseURL) {
+  constructor(baseURL, defaultHeaders = {}) {
     this.#client = axios.create({ baseURL })
 
-    // Attach jwt_token to every request if present
+    // Attach jwt_token + any instance-level default headers to every request
     this.#client.interceptors.request.use((config) => {
       const token = Cookies.get("jwt_token")
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
       }
+      Object.assign(config.headers, defaultHeaders)
       return config
     })
 
@@ -37,5 +38,11 @@ class ApiClient {
   delete(url, config)        { return this.#client.delete(url, config) }
 }
 
-export const apiClient    = new ApiClient(import.meta.env.VITE_API_URL)
-export const csClient     = new ApiClient(import.meta.env.VITE_COMMON_SERVICE_API_URL)
+// VITE_API_URL          → IFG backend  (5003) — clouds, files, etc.
+export const apiClient        = new ApiClient(import.meta.env.VITE_API_URL, { Appname: "IFG" })
+
+// VITE_COMMON_SERVICE_API_URL → internal API  (5002) — users, login
+export const csClient         = new ApiClient(import.meta.env.VITE_COMMON_SERVICE_API_URL)
+
+// VITE_COMMON_SERVICE_URL     → AMD portal (dev.epycadvisory.amd.com) — applications, getUserToken
+export const amdPortalClient  = new ApiClient(import.meta.env.VITE_COMMON_SERVICE_URL)

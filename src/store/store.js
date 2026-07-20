@@ -3,6 +3,8 @@ import fileCatalogReducer from "./slice/fileCatalog.slice"
 import filterOptionsReducer from "./slice/filterOptions.slice"
 import versioningReducer from "./slice/versioning.slice"
 import releaseReducer    from "./slice/release.slice"
+import appReducer        from "./slice/app.slice"
+import categoryReducer   from "./slice/category.slice"
 
 export const store = configureStore({
   reducer: {
@@ -10,5 +12,7 @@ export const store = configureStore({
     filterOptions: filterOptionsReducer,
     versioning:    versioningReducer,
     release:       releaseReducer,
+    app:           appReducer,
+    category:      categoryReducer,
   },
 })
