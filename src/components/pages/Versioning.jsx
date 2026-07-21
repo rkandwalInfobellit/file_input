@@ -346,6 +346,7 @@ export default function Versioning() {
             loading={detailStatus === "loading"}
             error={detailStatus === "failed" ? detailError : null}
             emptyMessage="No versions found for this file."
+            className="border-none"
           />
         </div>
       )}
