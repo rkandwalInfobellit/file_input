@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { loginWithCredentials, fetchUserInfo, setAuthCookies } from "@/lib/auth"
 import { ROUTES } from "@/lib/routes"
 import headerLogo from "@/assets/amd-header-logo.svg"
+import { Button } from "../ui/button";
 
 const schema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -70,9 +71,7 @@ export default function InternalLoginPage() {
                 {...register("email")}
                 className="rounded-none border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
-              )}
+                <p className="text-xs h-6 text-destructive">{errors.email && (errors.email.message)}</p>
             </div>
 
             {/* Password */}
@@ -98,22 +97,19 @@ export default function InternalLoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
-              )}
+              <p className="text-xs h-6 text-destructive">{errors.password && (errors.password.message)}</p>
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="mt-8">
-            <button
+          {/* Submit */} 
+            <Button
               type="submit"
               disabled={!isValid || isLoading}
-              className="h-[50px] w-full rounded-none bg-primary px-6 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 md:w-48"
+              size="lg"
+              className="scale-125 ml-2"
             >
               {isLoading ? "Signing in…" : "Sign In"}
-            </button>
-          </div>
+            </Button> 
         </form>
 
         <p className="mt-8 border-t border-border pt-6 text-xs text-muted-foreground">

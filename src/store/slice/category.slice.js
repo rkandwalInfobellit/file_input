@@ -3,9 +3,9 @@ import CategoryService from "@/services/category.service"
 
 export const fetchCategories = createAsyncThunk(
   "category/fetchCategories",
-  async ({ page = 1, limit = 10, search = "" } = {}, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10, search = "", is_active } = {}, { rejectWithValue }) => {
     try {
-      return await CategoryService.list({ page, limit, search })
+      return await CategoryService.list({ page, limit, search, is_active })
     } catch (err) {
       return rejectWithValue(err.message || "Failed to fetch categories")
     }

@@ -1,11 +1,9 @@
 export const FILE_STATUS = Object.freeze({
-  PENDING:            "Pending",
-  REVIEW:             "Review",
-  PARTIALLY_APPROVED: "Partially Approved",
-  APPROVED:           "Approved",
-  PARTIALLY_REJECTED: "Partially Rejected",
-  REJECTED:           "Rejected",
-  ROLLBACK:           "Rollback",
+  PENDING:            "pending",
+  REVIEW:             "review",
+  PARTIALLY_APPROVED: "partially_approved",
+  APPROVED:           "approved", 
+  REJECTED:           "rejected", 
 })
 
 export const FILE_STATUS_COLORS = Object.freeze({

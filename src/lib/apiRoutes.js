@@ -10,6 +10,9 @@ export const API_ROUTES = Object.freeze({
   // IFG API  (ifgClient — VITE_IFG_API_URL)
   CLOUDS_LIST: "/ifgapi/clouds/list",
 
+  // Catalog  (apiClient — VITE_API_URL)
+  CATALOG_LIST: "/ifgapi/catalog/list",
+
   // Categories  (apiClient — VITE_API_URL)
   CATEGORIES_LIST:   "/ifgapi/categories/list",
   CATEGORIES_DETAIL: "/ifgapi/categories/detail",

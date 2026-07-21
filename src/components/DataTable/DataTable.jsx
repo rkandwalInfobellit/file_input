@@ -183,7 +183,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
       pagination.setPageIndex(next.pageIndex)
       pagination.setPageSize(next.pageSize)
     } : undefined,
-    manualPagination: false,
+    manualPagination: !!pagination,
   })
 
   return (
