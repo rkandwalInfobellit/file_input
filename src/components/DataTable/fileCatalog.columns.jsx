@@ -78,7 +78,7 @@ export const fileCatalogColumns = [
     id: "actions",
     header: "",
     cell: ({ row, table }) => {
-      const fileId   = row.original.file_id
+      const fileId   = row.original.version_id
       const fileName = row.original.file_name
       return (
         <TooltipProvider>

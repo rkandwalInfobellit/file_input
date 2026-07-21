@@ -11,7 +11,10 @@ export const API_ROUTES = Object.freeze({
   CLOUDS_LIST: "/ifgapi/clouds/list",
 
   // Catalog  (apiClient — VITE_API_URL)
-  CATALOG_LIST: "/ifgapi/catalog/list",
+  CATALOG_LIST:          "/ifgapi/catalog/list",
+  FILE_UPLOAD_SUBMIT:    "/ifgapi/file-upload/submit",
+  APPROVALS_DETAIL:      "/ifgapi/approvals/detail",
+  APPROVALS_APPROVE:     "/ifgapi/approvals/approve",
 
   // Categories  (apiClient — VITE_API_URL)
   CATEGORIES_LIST:   "/ifgapi/categories/list",

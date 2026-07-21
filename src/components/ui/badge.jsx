@@ -63,10 +63,7 @@ function Badge({
 }) {
   const colorStyle = color ? COLOR_SCHEME_STYLES[color] : undefined;
   const statusColors = status ? FILE_STATUS_COLORS[status] : undefined;
-  
-  console.log({
-    status, FILE_STATUS_COLORS
-  })
+
   const statusStyle = statusColors
     ? { backgroundColor: statusColors.bg, color: statusColors.text }
     : undefined;

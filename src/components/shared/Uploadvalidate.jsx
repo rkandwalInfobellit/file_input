@@ -1,250 +1,307 @@
-import React, { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSelector, useDispatch } from "react-redux";
 import { toast } from "sonner";
-import { Download, ArrowLeft, Upload } from "lucide-react";
+import { Download, ArrowLeft, Upload, Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { FieldLabel, FieldError, Field } from "@/components/ui/field";
-import { Textarea } from "../ui/textarea";
-import { Input } from "../ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox-select";
+import { Badge } from "@/components/ui/badge";
+
 import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors";
-import { fetchFilterOptions } from "@/store/slice/filterOptions.slice";
+import { fetchClouds, fetchApplications } from "@/store/slice/app.slice";
 import { ROUTES } from "@/lib/routes";
+import CategoryService from "@/services/category.service";
+import FileUploadService from "@/services/fileUpload.service";
+
 import {
   uploadSchema,
   CHANGE_TYPE_OPTIONS,
-  CURRENT_VERSION,
   bumpVersion,
 } from "./upload/uploadSchema";
 import { SelectField } from "./upload/SelectField";
-import { ApproverField } from "./upload/ApproverField";
 import { FileDropZone } from "./upload/FileDropZone";
 import { ResultDialog } from "./upload/ResultDialog";
-import { Badge } from "../ui/badge";
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
 export default function UploadValidatePage() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { apps, clouds, categories } = useSelector(selectFilterOptions);
 
-  const [submitResult, setSubmitResult] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { governed_apps, clouds } = useSelector(selectFilterOptions);
 
+  const [submitting, setSubmitting]       = useState(false);
+  const [submitResult, setSubmitResult]   = useState(null);
+  const [dialogOpen, setDialogOpen]       = useState(false);
+  const [selectedCategory, setSelectedCategory]   = useState(null); // full { category_id, display_name } object
+  const [latestVersion, setLatestVersion]         = useState(null);
+  const [templateDownloadUrl, setTemplateDownloadUrl] = useState(null);
+  const [versionLoading, setVersionLoading]       = useState(false);
+
+  // Fetch apps + clouds on mount (same as FileCatalog)
   useEffect(() => {
-    dispatch(fetchFilterOptions());
+    dispatch(fetchClouds());
+    dispatch(fetchApplications());
   }, [dispatch]);
 
   const {
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(uploadSchema),
     defaultValues: {
-      name: "",
-      application: "",
-      cloud: "",
-      fileCategory: "",
-      changeType: "",
-      approvers: [],
-      description: "",
-      file: null,
+      governed_apps: [],
+      clouds:        [],
+      category_id:   "",
+      change_type:   "",
+      description:   "",
+      file:          null,
     },
   });
 
-  const navigate = useNavigate();
+  const watchApps      = watch("governed_apps");
+  const watchClouds    = watch("clouds");
+  const watchCategory  = watch("category_id");
+  const watchChangeType = watch("change_type");
 
-  const changeType = watch("changeType");
-  const [watchApplication, watchCloud, watchCategory] = watch([
-    "application",
-    "cloud",
-    "fileCategory",
-  ]);
-  const approverDisabled = !watchApplication || !watchCloud || !watchCategory;
-  const newVersion =
-    changeType && changeType !== "no-change"
-      ? bumpVersion(CURRENT_VERSION, changeType)
-      : CURRENT_VERSION;
+  const appAndCloudSelected  = watchApps.length > 0 && watchClouds.length > 0;
+  const categorySelected     = !!watchCategory;
+  const changeTypeEnabled    = categorySelected && latestVersion !== null;
+
+  const newVersion = watchChangeType && watchChangeType !== "no-change"
+    ? bumpVersion(latestVersion ?? "0.0.0", watchChangeType)
+    : (latestVersion ?? "0.0.0");
+
+  // When category changes, fetch its latest_version
+  useEffect(() => {
+    if (!watchCategory) {
+      setSelectedCategory(null);
+      setLatestVersion(null);
+      setTemplateDownloadUrl(null);
+      setValue("change_type", "");
+      return;
+    }
+    setVersionLoading(true);
+    setLatestVersion(null);
+    setTemplateDownloadUrl(null);
+    setValue("change_type", "");
+    CategoryService.detail(watchCategory)
+      .then((detail) => {
+        setLatestVersion(detail?.latest_version ?? "0.0.0");
+        setTemplateDownloadUrl(detail?.template_download_url ?? null);
+      })
+      .catch(() => setLatestVersion("0.0.0"))
+      .finally(() => setVersionLoading(false));
+  }, [watchCategory, setValue]);
+
+  // Async category search for Combobox
+  const searchCategories = useCallback(async (query, page) => {
+    const result = await CategoryService.list({ page, limit: 20, search: query, is_active: true });
+    return { items: result.items, total_pages: result.total_pages };
+  }, []);
 
   function onInvalid() {
-    toast.error("Please fill in all required fields.", {
-      id: "form-validation",
-      duration: 4000,
-    });
+    toast.error("Please fill in all required fields.", { id: "form-validation", duration: 4000 });
   }
 
-  function onSubmit(data) {
-    const validationErrors = [];
-    if (data.changeType === "no-change") {
-      validationErrors.push({
-        row: "—",
-        field: "change_type",
-        message: (
-          <>
-            <span className="font-semibold">No-change path</span> — will route
-            to approver for challenge/rejection within 2 working days.
-          </>
-        ),
+  async function onSubmit(data) {
+    setSubmitting(true);
+    try {
+      const response = await FileUploadService.submit({
+        governed_apps: data.governed_apps,
+        clouds:        data.clouds,
+        category_id:   data.category_id,
+        file_name:     data.file.name,
+        input_version: newVersion,
+        change_type:   data.change_type,
+        description:   data.description ?? "",
       });
+
+      const uploadUrl = response?.upload_url ?? response?.template_upload_url;
+      if (uploadUrl) {
+        await FileUploadService.uploadToS3(uploadUrl, data.file);
+      }
+
+      setSubmitResult({ status: "passed", fileName: data.file.name, validationErrors: [] });
+      setDialogOpen(true);
+      setTimeout(() => navigate(ROUTES.FILE_CATALOG), 2000);
+    } catch (err) {
+      toast.error(err.message || "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitResult({
-      status: validationErrors.length === 0 ? "passed" : "failed",
-      fileName: data.file?.name ?? "uploaded_file",
-      validationErrors,
-    });
-    setDialogOpen(true);
-    setTimeout(() => {
-      navigate(ROUTES.FILE_CATALOG);
-    }, 2000);
   }
 
-  const appOptions = apps.map((a) => ({ value: a, label: a }));
+  const appOptions   = governed_apps.map((a) => ({ value: a, label: a }));
   const cloudOptions = clouds.map((c) => ({ value: c, label: c }));
-  const categoryOptions = categories.map((c) => ({ value: c, label: c }));
-
-  const handleRedirectBack = () => navigate(-1);
 
   return (
-    <section className="flex flex-col gap-4 px-4 py-1 ">
-      {/* Page header */}
+    <section className="flex flex-col gap-4 px-4 py-1">
       <div>
-        <Button variant="ghost" className="py-4" onClick={handleRedirectBack}>
+        <Button variant="ghost" className="py-4" onClick={() => navigate(-1)}>
           <ArrowLeft />
           Back
         </Button>
         <h1 className="text-3xl font-extrabold mb-2">Upload &amp; Validate</h1>
-
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Upload an input file, select approvers, and run schema validation.
-          Files that fail validation are not submitted — fix and re-upload.
+          Upload an input file and run schema validation. Files that fail
+          validation are not submitted — fix and re-upload.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
         <div className="flex gap-6 items-start">
-          {/* Left: Upload form */}
           <div className="flex-1 rounded-lg border bg-card p-7">
-            {/* Name + Application */}
+
+            {/* Application + Cloud */}
             <div className="grid grid-cols-2 gap-5 mb-5">
-              <Field className="mb-5">
-                <FieldLabel
-                  htmlFor="name"
-                  className="text-[11px] font-semibold tracking-wider"
-                >
-                  NAME
+              <Field>
+                <FieldLabel className="text-[11px] font-semibold tracking-wider">
+                  APPLICATION
                 </FieldLabel>
                 <Controller
-                  name="name"
+                  name="governed_apps"
                   control={control}
                   render={({ field }) => (
-                    <Input
-                      id="name"
-                      placeholder="Enter a name for this upload"
-                      aria-invalid={!!errors.name}
-                      {...field}
+                    <Combobox
+                      options={appOptions}
+                      value={field.value.map((v) => ({ value: v, label: v }))}
+                      onChange={(selected) => field.onChange(selected.map((o) => o.value))}
+                      getValue={(o) => o.value}
+                      getLabel={(o) => o.label}
+                      placeholder="Select applications"
+                      multiSelect={true}
+                      showSelected={true}
+                      searchable={false}
                     />
                   )}
                 />
-                <FieldError errors={errors.name ? [errors.name] : []} />
+                <FieldError errors={errors.governed_apps ? [errors.governed_apps] : []} />
               </Field>
-              <SelectField
-                name="application"
-                control={control}
-                label="APPLICATION"
-                errors={errors}
-                hasError={!!errors.application}
-                options={appOptions}
-                placeholder="Select application"
-              />
-            </div>
-            {/* Cloud + File Category */}
-            <div className="grid grid-cols-2 gap-5 mb-5">
-              <SelectField
-                name="cloud"
-                control={control}
-                label="CLOUD"
-                errors={errors}
-                hasError={!!errors.cloud}
-                options={cloudOptions}
-                placeholder="Select cloud"
-              />
-              <div>
-                <SelectField
-                  name="fileCategory"
+
+              <Field>
+                <FieldLabel className="text-[11px] font-semibold tracking-wider">
+                  CLOUD
+                </FieldLabel>
+                <Controller
+                  name="clouds"
                   control={control}
-                  label="FILE CATEGORY (TEMPLATE)"
-                  errors={errors}
-                  hasError={!!errors.fileCategory}
-                  options={categoryOptions}
-                  placeholder="Select category"
-                  className="mb-2"
+                  render={({ field }) => (
+                    <Combobox
+                      options={cloudOptions}
+                      value={field.value.map((v) => ({ value: v, label: v }))}
+                      onChange={(selected) => field.onChange(selected.map((o) => o.value))}
+                      getValue={(o) => o.value}
+                      getLabel={(o) => o.label}
+                      placeholder="Select clouds"
+                      multiSelect={true}
+                      showSelected={true}
+                      searchable={false}
+                    />
+                  )}
                 />
+                <FieldError errors={errors.clouds ? [errors.clouds] : []} />
+              </Field>
+            </div>
+
+            {/* File Category — disabled until app + cloud selected */}
+            <div className="mb-5">
+              <Field>
+                <FieldLabel className="text-[11px] font-semibold tracking-wider">
+                  FILE CATEGORY (TEMPLATE)
+                </FieldLabel>
+                <Controller
+                  name="category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Combobox
+                      onSearch={searchCategories}
+                      value={selectedCategory ? [selectedCategory] : []}
+                      onChange={(selected) => {
+                        const cat = selected[0] ?? null
+                        setSelectedCategory(cat)
+                        field.onChange(cat?.category_id ?? "")
+                      }}
+                      getValue={(o) => o.category_id}
+                      getLabel={(o) => o.display_name}
+                      placeholder={appAndCloudSelected ? "Search category…" : "Select app & cloud first"}
+                      multiSelect={false}
+                      showSelected={true}
+                      disabled={!appAndCloudSelected}
+                    />
+                  )}
+                />
+                <FieldError errors={errors.category_id ? [errors.category_id] : []} />
+              </Field>
+              {categorySelected && templateDownloadUrl && (
                 <a
-                  href="#"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium mb-6 text-primary"
+                  href={templateDownloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium mt-2 text-primary"
                 >
                   <Download size={14} />
                   Download template for selected category
                 </a>
-              </div>
+              )}
             </div>
 
-            {/* Change Type */}
-            <div className="flex gap-2">
-              <SelectField
-                name="changeType"
-                control={control}
-                label="CHANGE TYPE · SETS INPUT-FILE VERSION"
-                errors={errors}
-                hasError={!!errors.changeType}
-                options={CHANGE_TYPE_OPTIONS}
-                placeholder="Select change type"
-                className="mb-3"
-              />
+            {/* Change Type + Version preview */}
+            <div className="flex gap-4 items-end mb-2">
+              <div className="flex-1">
+                <SelectField
+                  name="change_type"
+                  control={control}
+                  label="CHANGE TYPE · SETS INPUT-FILE VERSION"
+                  errors={errors}
+                  hasError={!!errors.change_type}
+                  options={CHANGE_TYPE_OPTIONS}
+                  placeholder={
+                    !categorySelected  ? "Select category first" :
+                    latestVersion === null ? "Loading version…" :
+                    "Select change type"
+                  }
+                  disabled={latestVersion === null}
+                />
+              </div>
 
-              {/* Version preview */}
-              <div className="flex gap-2 items-center justify-between mt-4">
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                  Version update:
-                </span>
-                <span className="text-sm font-semibold flex items-center gap-2">
-                  <Badge variant="secondary" className="text-sm font-semibold">{CURRENT_VERSION}</Badge>
-                  <span className="text-muted-foreground">→</span>
-                  {changeType && changeType !== "no-change" && (
-                    <Badge variant="secondary" className="text-sm font-semibold">{newVersion}</Badge>
-                  )}
-                  {changeType === "no-change" && (
-                    <Badge variant="secondary" className="text-sm font-semibold">{CURRENT_VERSION}</Badge>
-                  )}
-                  {!changeType && (
+              {/* Version row: spinner while loading, hidden until version is ready */}
+              <div className="flex gap-2 items-center pb-1.5 shrink-0 min-h-9">
+                {categorySelected && versionLoading && (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {changeTypeEnabled && (
+                  <>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Version:</span>
                     <Badge variant="secondary" className="text-sm font-semibold">
-                      {CURRENT_VERSION}
+                      {latestVersion}
                     </Badge>
-                  )}
-                </span>
+                    {watchChangeType && watchChangeType !== "no-change" && (
+                      <>
+                        <span className="text-muted-foreground">→</span>
+                        <Badge variant="secondary" className="text-sm font-semibold">
+                          {newVersion}
+                        </Badge>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
             <p className="text-xs leading-relaxed mb-6 text-muted-foreground">
               Input file version = X.Y.Z (X major · Y minor · Z bug fix). "No
-              change / carried forward" keeps the version and routes to the
-              approver to challenge (see below).
+              change / carried forward" keeps the version.
             </p>
 
-            {/* Approvers — multi-select chips combobox */}
-            <ApproverField
-              control={control}
-              errors={errors}
-              disabled={approverDisabled}
-            />
-
             {/* File drop zone */}
-            <Field>
-              <FieldLabel className="text-[11px] font-semibold tracking-wider capitalize">
+            <Field className="mb-6">
+              <FieldLabel className="text-[11px] font-semibold tracking-wider">
                 FILE
               </FieldLabel>
               <FileDropZone control={control} errors={errors} />
@@ -252,11 +309,8 @@ export default function UploadValidatePage() {
             </Field>
 
             {/* Description */}
-            <Field className="mt-6">
-              <FieldLabel
-                htmlFor="description"
-                className="text-[11px] font-semibold tracking-wider capitalize"
-              >
+            <Field>
+              <FieldLabel htmlFor="description" className="text-[11px] font-semibold tracking-wider">
                 DESCRIPTION
               </FieldLabel>
               <Controller
@@ -272,18 +326,19 @@ export default function UploadValidatePage() {
                   />
                 )}
               />
-              <FieldError
-                errors={errors.description ? [errors.description] : []}
-              />
+              <FieldError errors={errors.description ? [errors.description] : []} />
             </Field>
 
             <div className="mt-6 flex gap-2 justify-end">
-              <Button size="lg" variant="outline" className="capitalize">
+              <Button size="lg" variant="outline" type="button" onClick={() => navigate(-1)}>
                 Cancel
               </Button>
-              <Button size="lg" type="submit" className="capitalize">
-                <Upload />
-                {" Validate & Submit"}
+              <Button size="lg" type="submit" disabled={submitting}>
+                {submitting
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Upload className="h-4 w-4" />
+                }
+                {submitting ? "Submitting…" : "Validate & Submit"}
               </Button>
             </div>
           </div>

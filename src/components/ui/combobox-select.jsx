@@ -127,7 +127,7 @@ export function Combobox({
       >
         {/* Left side */}
         <span className="flex-1 flex items-center flex-wrap gap-1 min-w-0">
-          {!multiSelect || !showSelected || value.length === 0 ? (
+          {!showSelected || value.length === 0 ? (
             <span className="text-muted-foreground truncate">{placeholder}</span>
           ) : (
             <span className="truncate text-foreground">{value.map(getLabel).join(", ")}</span>
