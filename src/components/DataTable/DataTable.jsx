@@ -164,15 +164,16 @@ function PaginationBar({ pagination, totalRows, pageCount }) {
 // pagination prop shape: { pageIndex, pageSize, setPageIndex, setPageSize }
 // Omit pagination to disable it.
 // ---------------------------------------------------------------------------
-export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination, meta, className="", }) {
+export function DataTable({ columns, data, filters, loading, error, emptyMessage = "No results.", pagination, meta, onRowClick, className="", }) {
+  const isManual = !!pagination?.pageCount
   const table = useReactTable({
     data,
     columns,
     meta,
-    
     getCoreRowModel:       getCoreRowModel(),
     getFilteredRowModel:   getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    ...(isManual && { rowCount: (pagination.pageCount ?? 1) * (pagination.pageSize ?? 10) }),
     state: pagination ? {
       pagination: { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
     } : undefined,
@@ -181,9 +182,9 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
         ? updater({ pageIndex: pagination.pageIndex, pageSize: pagination.pageSize })
         : updater
       pagination.setPageIndex(next.pageIndex)
-      pagination.setPageSize(next.pageSize)
+      if (pagination.setPageSize) pagination.setPageSize(next.pageSize)
     } : undefined,
-    manualPagination: !!pagination,
+    manualPagination: isManual,
   })
 
   return (
@@ -240,7 +241,12 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -257,8 +263,8 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
       {pagination && (
         <PaginationBar
           pagination={pagination}
-          totalRows={table.getFilteredRowModel().rows.length}
-          pageCount={table.getPageCount()}
+          totalRows={pagination.totalItems ?? table.getFilteredRowModel().rows.length}
+          pageCount={pagination.pageCount ?? table.getPageCount()}
         />
       )}
     </div>

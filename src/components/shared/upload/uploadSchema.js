@@ -5,7 +5,7 @@ export const uploadSchema = z.object({
   clouds:        z.array(z.string()).min(1, "Select at least one cloud"),
   category_id:   z.string().min(1, "File category is required"),
   change_type:   z.string().min(1, "Change type is required"),
-  description:   z.string().optional(),
+  description:   z.string().min(1, "description is required"),
   file: z
     .any()
     .refine((f) => f instanceof File, "Please upload a file")

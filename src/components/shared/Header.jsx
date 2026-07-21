@@ -27,18 +27,7 @@ export default function Header({ notificationCount = 0 }) {
 
       {/* Utility cluster */}
       <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          className="hidden items-center gap-2 rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:text-primary-foreground sm:flex"
-          aria-label="Search"
-        >
-          <Search className="h-4 w-4" strokeWidth={2} />
-          <span className="hidden md:inline">Search</span>
-          <kbd className="ml-2 hidden rounded border border-sidebar-border px-1 font-mono text-[10px] md:inline">
-            /
-          </kbd>
-        </button>
-
+        
         <button
           type="button"
           className="rounded-md p-2 text-primary-foreground transition-colors hover:bg-sidebar-accent/60 sm:hidden"
@@ -59,14 +48,7 @@ export default function Header({ notificationCount = 0 }) {
             </span>
           )}
         </button>
-
-        <button
-          type="button"
-          className="hidden rounded-md p-2 text-primary-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground sm:block"
-          aria-label="Help"
-        >
-          <HelpCircle className="h-4.5 w-4.5" strokeWidth={2} />
-        </button>
+ 
 
         <div className="mx-1 h-6 w-px bg-sidebar-border" />
 

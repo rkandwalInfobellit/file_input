@@ -102,9 +102,16 @@ export default function UploadValidatePage() {
 
   // Async category search for Combobox
   const searchCategories = useCallback(async (query, page) => {
-    const result = await CategoryService.list({ page, limit: 20, search: query, is_active: true });
+    const result = await CategoryService.list({
+      page,
+      limit: 20,
+      search: query,
+      is_active: true,
+      governed_apps: watchApps,
+      clouds: watchClouds,
+    });
     return { items: result.items, total_pages: result.total_pages };
-  }, []);
+  }, [watchApps, watchClouds]);
 
   function onInvalid() {
     toast.error("Please fill in all required fields.", { id: "form-validation", duration: 4000 });
@@ -118,7 +125,6 @@ export default function UploadValidatePage() {
         clouds:        data.clouds,
         category_id:   data.category_id,
         file_name:     data.file.name,
-        input_version: newVersion,
         change_type:   data.change_type,
         description:   data.description ?? "",
       });
@@ -132,7 +138,8 @@ export default function UploadValidatePage() {
       setDialogOpen(true);
       setTimeout(() => navigate(ROUTES.FILE_CATALOG), 2000);
     } catch (err) {
-      toast.error(err.message || "Submission failed. Please try again.");
+      setSubmitResult({ status: "error", message: err.message || "Submission failed. Please try again." });
+      setDialogOpen(true);
     } finally {
       setSubmitting(false);
     }

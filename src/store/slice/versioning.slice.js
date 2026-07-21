@@ -1,44 +1,53 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
+import { apiClient } from "@/lib/apiClient"
+import { API_ROUTES } from "@/lib/apiRoutes"
 
-// Fetches versions for all files that match the active filters.
-// In production swap the body for a real API call with filter params.
-export const fetchVersions = createAsyncThunk(
-  "versioning/fetchVersions",
-  async (_, { getState, rejectWithValue }) => {
+export const fetchVersionFileOptions = createAsyncThunk(
+  "versioning/fetchVersionFileOptions",
+  async ({ governed_app, cloud, category_id, page = 1, limit = 10 }, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      const { filters } = getState().versioning
-      const allFiles = getState().fileCatalog.files
-
-      const matched = allFiles.filter((f) => {
-        if (filters.category.length > 0 && !filters.category.includes(f.category))          return false
-        if (filters.app.length > 0      && !filters.app.some((a) => f.app.includes(a)))     return false
-        if (filters.cloud.length > 0    && !filters.cloud.some((c) => f.cloud.includes(c))) return false
-        return true
+      const { data } = await apiClient.get(API_ROUTES.VERSIONS_INPUT, {
+        params: { governed_apps: governed_app, clouds: cloud, category_id, page, limit },
       })
-
-      // Flatten all versions from matched files, tagging each with its file info
-      const versions = matched.flatMap((f) =>
-        (f.versions ?? []).map((v) => ({ ...v, _fileId: f.id, _fileName: f.name, _fileLabel: `${f.app.join("/")} · ${f.category}` }))
-      )
-
-      return { versions, fileCount: matched.length }
+      return data?.Data ?? { items: [], current_page: 1, total_pages: 1, total_items: 0 }
     } catch (err) {
-      return rejectWithValue(err.message || "Failed to load versions")
+      return rejectWithValue(err.message || "Failed to load file options")
+    }
+  }
+)
+
+export const fetchVersionHistory = createAsyncThunk(
+  "versioning/fetchVersionHistory",
+  async ({ file_id, page = 1, limit = 10 }, { rejectWithValue }) => {
+    try {
+      const { data } = await apiClient.get(API_ROUTES.VERSIONS_INPUT, {
+        params: { file_id, page, limit },
+      })
+      return data?.Data ?? null
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to load version history")
     }
   }
 )
 
 const initialState = {
-  versions: [],
-  fileCount: 0,
-  fetchStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
+  // file_options list
+  items: [],
+  totalItems: 0,
+  totalPages: 1,
+  currentPage: 1,
+  fetchStatus: "idle",
   error: null,
+
+  // history detail for a selected file
+  detail: null,
+  detailStatus: "idle",
+  detailError: null,
+
   filters: {
-    category: [],
-    app: [],
-    cloud: [],
-    status: [],
+    governed_app: null,
+    cloud: null,
+    category_id: null,
   },
 }
 
@@ -46,36 +55,90 @@ const versioningSlice = createSlice({
   name: "versioning",
   initialState,
   reducers: {
-    setVersioningCategoryFilter(state, action) { state.filters.category = action.payload; state.fetchStatus = "idle" },
-    setVersioningAppFilter(state, action)      { state.filters.app      = action.payload; state.fetchStatus = "idle" },
-    setVersioningCloudFilter(state, action)    { state.filters.cloud    = action.payload; state.fetchStatus = "idle" },
-    setVersioningStatusFilter(state, action)   { state.filters.status   = action.payload },
+    setVersioningAppFilter(state, action) {
+      state.filters.governed_app = action.payload
+      state.filters.cloud = null
+      state.filters.category_id = null
+      state.fetchStatus = "idle"
+      state.items = []
+      state.detail = null
+      state.detailStatus = "idle"
+    },
+    setVersioningCloudFilter(state, action) {
+      state.filters.cloud = action.payload
+      state.filters.category_id = null
+      state.fetchStatus = "idle"
+      state.items = []
+      state.detail = null
+      state.detailStatus = "idle"
+    },
+    setVersioningCategoryFilter(state, action) {
+      state.filters.category_id = action.payload
+      state.fetchStatus = "idle"
+      state.items = []
+      state.detail = null
+      state.detailStatus = "idle"
+    },
+    clearVersionDetail(state) {
+      state.detail = null
+      state.detailStatus = "idle"
+      state.detailError = null
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchVersions.pending, (state) => {
+      // file options
+      .addCase(fetchVersionFileOptions.pending, (state) => {
         state.fetchStatus = "loading"
         state.error = null
-        state.versions = []
-        state.fileCount = 0
+        state.items = []
+        state.detail = null
+        state.detailStatus = "idle"
       })
-      .addCase(fetchVersions.fulfilled, (state, action) => {
+      .addCase(fetchVersionFileOptions.fulfilled, (state, action) => {
+        const payload = action.payload ?? {}
         state.fetchStatus = "succeeded"
-        state.versions = action.payload.versions
-        state.fileCount = action.payload.fileCount
+        if (payload.mode === "history") {
+          // API returned a single file's history directly
+          state.items = []
+          state.totalItems = 0
+          state.totalPages = 1
+          state.detail = payload
+          state.detailStatus = "succeeded"
+        } else {
+          // mode === "file_options" — multiple files to pick from
+          state.items = payload.items ?? []
+          state.totalItems = payload.total_items ?? 0
+          state.totalPages = payload.total_pages ?? 1
+          state.currentPage = payload.current_page ?? 1
+        }
       })
-      .addCase(fetchVersions.rejected, (state, action) => {
+      .addCase(fetchVersionFileOptions.rejected, (state, action) => {
         state.fetchStatus = "failed"
         state.error = action.payload || action.error.message
+      })
+      // version history
+      .addCase(fetchVersionHistory.pending, (state) => {
+        state.detailStatus = "loading"
+        state.detailError = null
+        state.detail = null
+      })
+      .addCase(fetchVersionHistory.fulfilled, (state, action) => {
+        state.detailStatus = "succeeded"
+        state.detail = action.payload
+      })
+      .addCase(fetchVersionHistory.rejected, (state, action) => {
+        state.detailStatus = "failed"
+        state.detailError = action.payload || action.error.message
       })
   },
 })
 
 export const {
-  setVersioningCategoryFilter,
   setVersioningAppFilter,
   setVersioningCloudFilter,
-  setVersioningStatusFilter,
+  setVersioningCategoryFilter,
+  clearVersionDetail,
 } = versioningSlice.actions
 
 export default versioningSlice.reducer

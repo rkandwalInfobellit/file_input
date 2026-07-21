@@ -94,6 +94,23 @@ function FailedCard({ fileName, validationErrors }) {
   );
 }
 
+function ApiErrorCard({ message }) {
+  return (
+    <div className="rounded-lg border bg-card p-6">
+      <div className="flex items-start gap-2.5 mb-4">
+        <XCircle size={20} className="mt-0.5 shrink-0 text-destructive" />
+        <div>
+          <div className="font-bold text-[15px]">Submission failed</div>
+          <div className="text-xs text-muted-foreground">The server rejected this request</div>
+        </div>
+      </div>
+      <div className="rounded-md border border-destructive/30 bg-[color-mix(in_oklch,var(--destructive)_10%,white)] px-4 py-3 text-sm text-destructive leading-relaxed">
+        {message}
+      </div>
+    </div>
+  );
+}
+
 function PassedCard({ fileName }) {
   return (
     <div className="rounded-lg border bg-card p-6">
@@ -168,6 +185,8 @@ export function ResultDialog({ open, onClose, result }) {
           <DialogTitle className="font-semibold text-xl">
             {result.status === "passed"
               ? "Validation Passed"
+              : result.status === "error"
+              ? "Submission Error"
               : "Validation Failed"}
           </DialogTitle>
         </DialogHeader>
@@ -175,6 +194,8 @@ export function ResultDialog({ open, onClose, result }) {
         <div className="py-2">
           {result.status === "passed" ? (
             <PassedCard fileName={result.fileName} />
+          ) : result.status === "error" ? (
+            <ApiErrorCard message={result.message} />
           ) : (
             <FailedCard
               fileName={result.fileName}

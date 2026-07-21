@@ -2,13 +2,15 @@ import { apiClient } from "@/lib/apiClient"
 import { API_ROUTES } from "@/lib/apiRoutes"
 
 const CategoryService = {
-  async list({ page = 1, limit = 10, search = "", is_active } = {}) {
+  async list({ page = 1, limit = 10, search = "", is_active, governed_apps, clouds } = {}) {
     const { data } = await apiClient.get(API_ROUTES.CATEGORIES_LIST, {
       params: {
         page,
         limit,
         ...(search    ? { search }    : {}),
         ...(is_active !== undefined ? { is_active } : {}),
+        ...(governed_apps?.length   ? { governed_apps } : {}),
+        ...(clouds?.length          ? { clouds }        : {}),
       },
     })
     return data?.Data ?? { items: [], total_items: 0, total_pages: 0, current_page: 1 }

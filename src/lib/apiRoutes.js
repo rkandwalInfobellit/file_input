@@ -23,6 +23,9 @@ export const API_ROUTES = Object.freeze({
   CATEGORIES_UPDATE: "/ifgapi/categories/update",
   CATEGORIES_DELETE: "/ifgapi/categories/delete",
 
+  // Versioning
+  VERSIONS_INPUT: "/ifgapi/versions/input",
+
   // Common service  (csClient — VITE_COMMON_SERVICE_URL)
   GET_USER_TOKEN: "/getUserToken",
   APPLICATIONS: "/csapi/applications",

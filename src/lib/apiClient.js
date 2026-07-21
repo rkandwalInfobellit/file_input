@@ -5,7 +5,20 @@ class ApiClient {
   #client
 
   constructor(baseURL, defaultHeaders = {}) {
-    this.#client = axios.create({ baseURL })
+    this.#client = axios.create({
+      baseURL,
+      paramsSerializer: (params) => {
+        const parts = []
+        for (const [key, val] of Object.entries(params)) {
+          if (Array.isArray(val)) {
+            val.forEach((v) => parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(v)}`))
+          } else {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(val)}`)
+          }
+        }
+        return parts.join("&")
+      },
+    })
 
     // Attach jwt_token + any instance-level default headers to every request
     this.#client.interceptors.request.use((config) => {
