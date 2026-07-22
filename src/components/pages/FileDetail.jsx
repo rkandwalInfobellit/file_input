@@ -63,7 +63,7 @@ export default function FileDetail() {
   const { data, fetchStatus, error } = useSelector(selectApprovalDetail);
 
   const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(null); // 'approve' | 'reject' | null
   const [decision, setDecision] = useState(null); // 'approve' | 'reject' | null after API success
 
   useEffect(() => {
@@ -144,7 +144,7 @@ export default function FileDetail() {
       toast.error("A comment is required before submitting your decision.");
       return;
     }
-    setSubmitting(true);
+    setSubmitting(dec);
     try {
       await ApprovalDetailService.decide({
         version_id: id,
@@ -162,7 +162,7 @@ export default function FileDetail() {
     } catch (err) {
       toast.error(err.message || "Failed to submit decision.");
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   }
   const version_columns = [
@@ -366,10 +366,10 @@ export default function FileDetail() {
                     <div className="flex flex-col gap-2">
                       <Button
                         className="w-full bg-green-700 hover:bg-green-800 text-white"
-                        disabled={submitting || !comment.trim()}
+                        disabled={!!submitting || !comment.trim()}
                         onClick={() => handleDecide("approve")}
                       >
-                        {submitting
+                        {submitting === "approve"
                           ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           : <CheckCircle className="mr-2 h-4 w-4" />}
                         Approve
@@ -377,10 +377,10 @@ export default function FileDetail() {
                       <Button
                         variant="destructive"
                         className="w-full"
-                        disabled={submitting || !comment.trim()}
+                        disabled={!!submitting || !comment.trim()}
                         onClick={() => handleDecide("reject")}
                       >
-                        {submitting
+                        {submitting === "reject"
                           ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           : <XCircle className="mr-2 h-4 w-4" />}
                         Reject — return to contributor
