@@ -6,6 +6,7 @@ import releaseReducer        from "./slice/release.slice"
 import appReducer            from "./slice/app.slice"
 import categoryReducer       from "./slice/category.slice"
 import approvalDetailReducer from "./slice/approvalDetail.slice"
+import notificationReducer   from "./slice/notification.slice"
 
 export const store = configureStore({
   reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
     app:            appReducer,
     category:       categoryReducer,
     approvalDetail: approvalDetailReducer,
+    notifications:  notificationReducer,
   },
 })

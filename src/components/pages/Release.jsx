@@ -5,9 +5,7 @@ import { Plus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-import { fetchFiles } from "@/store/slice/fileCatalog.slice"
 import { fetchReleases, createRelease, resetCreateStatus } from "@/store/slice/release.slice"
-import { selectFileCatalogState } from "@/store/selectors/fileCatalog.selectors"
 
 import { ReleaseAccordion } from "./release/ReleaseAccordion"
 import { CreateReleaseSheet } from "./release/CreateReleaseSheet"
@@ -16,21 +14,18 @@ export default function Release() {
   const dispatch = useDispatch()
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const { files, fetchStatus: filesFetchStatus } = useSelector(selectFileCatalogState)
   const { releases, fetchStatus, createStatus } = useSelector((s) => s.release)
 
   useEffect(() => {
-    if (fetchStatus === "idle") dispatch(fetchReleases())
+    if (fetchStatus === "idle") dispatch(fetchReleases({ page: 1, limit: 10 }))
   }, [fetchStatus, dispatch])
-
-  useEffect(() => {
-    if (filesFetchStatus === "idle") dispatch(fetchFiles())
-  }, [filesFetchStatus, dispatch])
 
   useEffect(() => {
     if (createStatus === "succeeded") {
       setSheetOpen(false)
       dispatch(resetCreateStatus())
+      // Refresh the release list after a successful create
+      dispatch(fetchReleases({ page: 1, limit: 10 }))
     }
   }, [createStatus, dispatch])
 
@@ -41,7 +36,7 @@ export default function Release() {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-3xl font-extrabold">Release History</h1>
             <Badge variant="outline" className="text-xs">
-              Total Release: {releases.length}
+              Total Release: {releases?.length??[]}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground max-w-2xl">
@@ -65,15 +60,25 @@ export default function Release() {
       {fetchStatus === "succeeded" && (
         <div className="flex flex-col gap-3">
           {releases.map((r) => (
-            <ReleaseAccordion key={r.id} release={r} />
+            <ReleaseAccordion key={r.id ?? r.release_id} release={r} />
           ))}
+          {(releases?.length??[]) === 0 && (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              No releases yet. Create the first one above.
+            </p>
+          )}
         </div>
+      )}
+
+      {fetchStatus === "failed" && (
+        <p className="text-sm text-destructive py-8 text-center">
+          Failed to load releases. Please refresh the page.
+        </p>
       )}
 
       <CreateReleaseSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        files={files}
         onSubmit={(payload) => dispatch(createRelease(payload))}
         submitting={createStatus === "loading"}
       />

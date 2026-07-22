@@ -1,103 +1,36 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
-import { FILE_STATUS } from "./filterOptions.slice"
+import ReleaseService from "@/services/release.service"
 
 // ---------------------------------------------------------------------------
-// Dummy releases — each has a manifest of files snapshotted at release time
-// ---------------------------------------------------------------------------
-const DUMMY_RELEASES = [
-  {
-    id: "rel-001",
-    name: "Release v7.0.1",
-    type: "bugfix",
-    status: "active",
-    date: "07/10/2026",
-    tag: "REC-7-2026-06-*",
-    files: [
-      { id: "aws_rules",                name: "aws_rules.json",                app: "CCA", cloud: "AWS",   version: "v1.1", contributor: "Contributor 1", approvedDate: "2024-06-12", approvedBy: "Approver 1, 2" },
-      { id: "azure_rules",              name: "azure_rules.json",              app: "CCA", cloud: "Azure", version: "v2.0", contributor: "Contributor 2", approvedDate: "2024-06-10", approvedBy: "Approver 1" },
-      { id: "gcp_rules",                name: "gcp_rules.json",                app: "CCA", cloud: "GCP",   version: "v1.0", contributor: "Contributor 3", approvedDate: "2024-06-08", approvedBy: "Approver 2" },
-      { id: "scaler_migration_paths",   name: "scaler_migration_paths.xlsx",   app: "CCA", cloud: "—",     version: "v2.9", contributor: "Contributor 4", approvedDate: "2024-06-05", approvedBy: "Approver 1" },
-      { id: "recommendation_remarks_cca", name: "recommendation_remarks_CCA.xlsx", app: "CCA", cloud: "—", version: "v4.0", contributor: "Contributor 5", approvedDate: "2024-06-01", approvedBy: "Approver 1" },
-    ],
-  },
-  {
-    id: "rel-002",
-    name: "Release v7.1.1",
-    type: "minor",
-    status: "released",
-    date: "07/11/2026",
-    tag: "REC-7-2026-07-1",
-    files: [
-      { id: "aws_rules",   name: "aws_rules.json",   app: "CCA", cloud: "AWS",   version: "v1.2", contributor: "Contributor 1", approvedDate: "2024-07-01", approvedBy: "Approver 1" },
-      { id: "gcp_rules",   name: "gcp_rules.json",   app: "CCA", cloud: "GCP",   version: "v1.1", contributor: "Contributor 3", approvedDate: "2024-07-02", approvedBy: "Approver 2" },
-    ],
-  },
-  {
-    id: "rel-003",
-    name: "Release v7.1.1",
-    type: "minor",
-    status: "released",
-    date: "07/12/2026",
-    tag: "REC-7-2026-07-2",
-    files: [
-      { id: "azure_rules", name: "azure_rules.json", app: "CCA", cloud: "Azure", version: "v2.1", contributor: "Contributor 2", approvedDate: "2024-07-10", approvedBy: "Approver 1" },
-    ],
-  },
-  {
-    id: "rel-004",
-    name: "Release v7.1.1",
-    type: "minor",
-    status: "released",
-    date: "07/13/2026",
-    tag: "REC-7-2026-07-3",
-    files: [],
-  },
-  {
-    id: "rel-005",
-    name: "Release v7.1.1",
-    type: "minor",
-    status: "released",
-    date: "07/14/2026",
-    tag: "REC-7-2026-07-4",
-    files: [],
-  },
-  {
-    id: "rel-006",
-    name: "Release v7.1.1",
-    type: "minor",
-    status: "released",
-    date: "07/15/2026",
-    tag: "REC-7-2026-07-5",
-    files: [],
-  },
-]
-
-// ---------------------------------------------------------------------------
-// Fetch releases thunk
+// Thunks
 // ---------------------------------------------------------------------------
 export const fetchReleases = createAsyncThunk(
   "release/fetchReleases",
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
     try {
-      await new Promise((r) => setTimeout(r, 300))
-      return DUMMY_RELEASES
+      return await ReleaseService.getList({ page, limit })
     } catch (err) {
       return rejectWithValue(err.message || "Failed to load releases")
     }
   }
 )
 
-// ---------------------------------------------------------------------------
-// Create release thunk
-// ---------------------------------------------------------------------------
+export const fetchDraftFiles = createAsyncThunk(
+  "release/fetchDraftFiles",
+  async ({ page = 1, limit = 50 } = {}, { rejectWithValue }) => {
+    try {
+      return await ReleaseService.getDraftFiles({ page, limit })
+    } catch (err) {
+      return rejectWithValue(err.message || "Failed to load draft files")
+    }
+  }
+)
+
 export const createRelease = createAsyncThunk(
   "release/createRelease",
-  async (payload, { getState, rejectWithValue }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      await new Promise((r) => setTimeout(r, 400))
-      const releases = getState().release.releases
-      const id = `rel-${String(releases.length + 1).padStart(3, "0")}`
-      return { id, ...payload, status: "active", date: new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }) }
+      return await ReleaseService.create(payload)
     } catch (err) {
       return rejectWithValue(err.message || "Failed to create release")
     }
@@ -110,29 +43,54 @@ export const createRelease = createAsyncThunk(
 const releaseSlice = createSlice({
   name: "release",
   initialState: {
-    releases: [],
+    // Release list
+    releases:    [],
     fetchStatus: "idle",
+
+    // Draft files (for the Create sheet)
+    draftFiles:       [],
+    draftPage:        1,
+    draftPageCount:   1,
+    draftTotal:       0,
+    draftLimit:       50,
+    draftFetchStatus: "idle",
+
     createStatus: "idle",
-    error: null,
+    error:        null,
   },
   reducers: {
-    resetCreateStatus(state) { state.createStatus = "idle" },
+    resetCreateStatus(state)    { state.createStatus = "idle" },
+    resetDraftFilesStatus(state){ state.draftFetchStatus = "idle" },
+    setDraftPage(state, action) { state.draftPage = action.payload },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchReleases.pending,   (state)         => { state.fetchStatus  = "loading";   state.error = null })
-      .addCase(fetchReleases.fulfilled, (state, action) => { state.fetchStatus  = "succeeded"; state.releases = action.payload })
-      .addCase(fetchReleases.rejected,  (state, action) => { state.fetchStatus  = "failed";    state.error = action.payload })
-      .addCase(createRelease.pending,   (state)         => { state.createStatus = "loading" })
-      .addCase(createRelease.fulfilled, (state, action) => {
-        state.createStatus = "succeeded"
-        // All previously active releases become released
-        state.releases.forEach((r) => { if (r.status === "active") r.status = "released" })
-        state.releases.unshift(action.payload)
+      // fetchReleases
+      .addCase(fetchReleases.pending,   (state)         => { state.fetchStatus = "loading";   state.error = null })
+      .addCase(fetchReleases.fulfilled, (state, action) => {
+        state.fetchStatus = "succeeded"
+        state.releases    = action.payload.items ?? []
       })
-      .addCase(createRelease.rejected,  (state, action) => { state.createStatus = "failed";    state.error = action.payload })
+      .addCase(fetchReleases.rejected,  (state, action) => { state.fetchStatus = "failed";    state.error = action.payload })
+
+      // fetchDraftFiles
+      .addCase(fetchDraftFiles.pending,   (state)         => { state.draftFetchStatus = "loading"; state.error = null })
+      .addCase(fetchDraftFiles.fulfilled, (state, action) => {
+        state.draftFetchStatus = "succeeded"
+        state.draftFiles       = action.payload.items      ?? []
+        state.draftPage        = action.payload.page       ?? 1
+        state.draftPageCount   = action.payload.pages      ?? 1
+        state.draftTotal       = action.payload.total      ?? 0
+        state.draftLimit       = action.payload.limit      ?? 50
+      })
+      .addCase(fetchDraftFiles.rejected,  (state, action) => { state.draftFetchStatus = "failed"; state.error = action.payload })
+
+      // createRelease
+      .addCase(createRelease.pending,   (state)         => { state.createStatus = "loading" })
+      .addCase(createRelease.fulfilled, (state)         => { state.createStatus = "succeeded" })
+      .addCase(createRelease.rejected,  (state, action) => { state.createStatus = "failed"; state.error = action.payload })
   },
 })
 
-export const { resetCreateStatus } = releaseSlice.actions
+export const { resetCreateStatus, resetDraftFilesStatus, setDraftPage } = releaseSlice.actions
 export default releaseSlice.reducer

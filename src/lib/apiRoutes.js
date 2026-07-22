@@ -26,6 +26,16 @@ export const API_ROUTES = Object.freeze({
   // Versioning
   VERSIONS_INPUT: "/ifgapi/versions/input",
 
+  // Release
+  RELEASE_DRAFT_FILES: "/ifgapi/release/draft/files",
+  RELEASE_CREATE:      "/ifgapi/release/create",
+  RELEASE_LIST:        "/ifgapi/release/list",
+
+  // Notifications
+  NOTIFICATIONS_INBOX: "/ifgapi/notifications/inbox",
+  NOTIFICATIONS_READ:  "/ifgapi/notifications/read",
+  NOTIFICATIONS_CLEAR: "/ifgapi/notifications/clear",
+
   // Common service  (csClient — VITE_COMMON_SERVICE_URL)
   GET_USER_TOKEN: "/getUserToken",
   APPLICATIONS: "/csapi/applications",
