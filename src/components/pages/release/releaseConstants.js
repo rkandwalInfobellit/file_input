@@ -35,14 +35,15 @@ export const STATUS_VARIANT = {
   active:   { label: "Active",   variant: "default" },
   released: { label: "Released", variant: "secondary" },
 }
-
-export const CURRENT_RELEASE_VERSION = "7.1.1"
+ 
 
 export function bumpReleaseVersion(version, type) {
-  const [major, minor, patch] = version.split(".").map(Number)
-  if (type === "major") return `${major + 1}.0.0`
-  if (type === "minor") return `${major}.${minor + 1}.0`
-  if (type === "bugfix") return `${major}.${minor}.${patch + 1}`
+  // Strip leading "v" or "V" before parsing
+  const clean = (version ?? "0.0.0").replace(/^v/i, "")
+  const [major, minor, patch] = clean.split(".").map(Number)
+  if (type === "major") return `v${major + 1}.0.0`
+  if (type === "minor") return `v${major}.${minor + 1}.0`
+  if (type === "bugfix") return `v${major}.${minor}.${patch + 1}`
   return version
 }
 
@@ -60,7 +61,7 @@ export function versionOptionsFor(file) {
   const latestVer = versions.find((v) => v.ui_state === "Latest" || v.is_latest)
   const latestVersion = latestVer?.version ?? file.latestInputVersion ?? file.version
   if (latestVersion) {
-    opts.push({ value: latestVersion, label: `${latestVersion} — Latest version`, isRollback: false })
+    opts.push({ value: latestVersion, label: `${latestVersion.toUpperCase()} — Latest Version`, isRollback: false })
   }
 
   // Rollback versions — ui_state === "Rollback"
@@ -68,7 +69,7 @@ export function versionOptionsFor(file) {
   rollbackVers.forEach((rv) => {
     opts.push({
       value:      `${rv.version}-rollback`,
-      label:      `${rv.version} — Previous version (rollback)`,
+      label:      `${rv.version.toUpperCase()} — Previous Version (Rollback)`,
       isRollback: true,
       versionId:  rv.version_id,
     })
@@ -81,13 +82,13 @@ export function versionOptionsFor(file) {
     )
     const approvedVersion = legacyApproved?.version ?? file.version
     if (approvedVersion) {
-      opts.push({ value: approvedVersion, label: `${approvedVersion} — Latest version`, isRollback: false })
+      opts.push({ value: approvedVersion, label: `${approvedVersion.toUpperCase()} — Latest Version`, isRollback: false })
     }
     const legacyRollback = versions.find((v) => v.status === FILE_STATUS.ROLLBACK)
     if (legacyRollback) {
-      opts.push({ value: `${legacyRollback.version}-rollback`, label: `${legacyRollback.version} — Previous version (rollback)`, isRollback: true })
+      opts.push({ value: `${legacyRollback.version}-rollback`, label: `${legacyRollback.version.toUpperCase()} — Previous Version (Rollback)`, isRollback: true })
     } else if (file.status === FILE_STATUS.ROLLBACK) {
-      opts.push({ value: `${file.version}-rollback`, label: `${file.version} — Previous version (rollback)`, isRollback: true })
+      opts.push({ value: `${file.version}-rollback`, label: `${file.version.toUpperCase()} — Previous Version (Rollback)`, isRollback: true })
     }
   }
 

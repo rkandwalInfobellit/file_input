@@ -24,8 +24,7 @@ import {
 import { DataTable } from "@/components/DataTable/DataTable"
 import { SingleRollbackDialog } from "./RollbackDialog"
 import {
-  RELEASE_TYPE_OPTIONS,
-  CURRENT_RELEASE_VERSION,
+  RELEASE_TYPE_OPTIONS, 
   bumpReleaseVersion,
   versionOptionsFor,
   mapDraftFile,
@@ -65,12 +64,7 @@ function makeColumns({ selected, versions, rollbackReasons, toggleFile, onVersio
   return [
     {
       id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-        />
-      ),
+      header: () =>"",
       cell: ({ row }) => (
         <Checkbox
           checked={!!selected[row.original.id]}
@@ -178,7 +172,7 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
   // Rollback dialog state — one file at a time
   const [pendingRollback, setPendingRollback] = useState(null) // { file, newVersion }
 
-  const baseVersion = currentVersion ?? CURRENT_RELEASE_VERSION
+  const baseVersion = currentVersion 
   const newVersion  = releaseType ? bumpReleaseVersion(baseVersion, releaseType) : baseVersion
   const releaseName = releaseType ? `Release v${newVersion}` : ""
 
