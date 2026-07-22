@@ -38,6 +38,7 @@ const releaseFileColumns = [
 ]
 
 export function ReleaseAccordion({ release }) {
+  const files = release.files ?? []
   const [open, setOpen] = useState(release.status === "active")
 
   return (
@@ -59,12 +60,12 @@ export function ReleaseAccordion({ release }) {
         </div>
       </button>
 
-      {open && release.files.length > 0 && (
+      {open && files.length > 0 && (
         <>
           <Separator />
           <DataTable
             columns={releaseFileColumns}
-            data={release.files}
+            data={files}
             emptyMessage="No files in this release."
             loading={false}
             error={null}
@@ -78,7 +79,7 @@ export function ReleaseAccordion({ release }) {
         </>
       )}
 
-      {open && release.files.length === 0 && (
+      {open && files.length === 0 && (
         <div className="px-5 py-6 text-sm text-muted-foreground border-t">
           No files in this release.
         </div>

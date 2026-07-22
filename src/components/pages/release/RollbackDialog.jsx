@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -11,6 +11,77 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 
+// ---------------------------------------------------------------------------
+// SingleRollbackDialog
+// Shown immediately when the user picks a previous version in the sheet.
+// Collects the reason for that one file, then confirms or cancels.
+// ---------------------------------------------------------------------------
+export function SingleRollbackDialog({ open, file, onConfirm, onCancel }) {
+  const [reason, setReason] = useState("")
+
+  // Reset reason each time dialog opens for a (potentially different) file
+  useEffect(() => {
+    if (open) setReason("")
+  }, [open])
+
+  if (!file) return null
+
+  const cleanVersion = file.rollbackVersion ?? "—"
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel() }}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            Confirm previous version
+            <Badge variant="destructive" className="text-[10px] tracking-wider">ROLLBACK</Badge>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-3 py-1">
+          <p className="text-xs text-muted-foreground">
+            You selected a previous version for <span className="font-semibold">{file.name}</span>.
+            A reason is required before this can be included in the release.
+          </p>
+
+          <div className="text-xs text-muted-foreground font-medium">Version to include</div>
+          <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-2.5 text-sm font-medium">
+            <span className="font-mono">{cleanVersion}</span>
+            <Badge variant="outline" className="text-[10px]">Previous</Badge>
+          </div>
+
+          <div className="text-xs text-muted-foreground font-medium mt-1">
+            Reason for selecting previous version <span className="text-destructive">(required)</span>
+          </div>
+          <textarea
+            className="w-full min-h-20 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring/30"
+            placeholder="Describe why this previous version is being included…"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            This reason will be included in notifications sent to approvers.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button
+            variant="destructive"
+            disabled={!reason.trim()}
+            onClick={() => onConfirm(reason.trim())}
+          >
+            Confirm
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// RollbackDialog (original — kept for backward compatibility)
+// ---------------------------------------------------------------------------
 export function RollbackDialog({ open, onClose, rollbackFiles, onConfirm }) {
   const [reasons, setReasons] = useState({})
 
@@ -31,7 +102,6 @@ export function RollbackDialog({ open, onClose, rollbackFiles, onConfirm }) {
         </DialogHeader>
 
         <div className="flex gap-6 py-2">
-          {/* Left: per-file reason inputs */}
           <div className="flex-1 flex flex-col gap-5">
             {rollbackFiles.map((f) => (
               <div key={f.id} className="flex flex-col gap-2">
@@ -61,7 +131,6 @@ export function RollbackDialog({ open, onClose, rollbackFiles, onConfirm }) {
             ))}
           </div>
 
-          {/* Right: consequences + notification preview */}
           <div className="w-56 shrink-0 flex flex-col gap-3">
             <p className="text-sm font-semibold">What happens on confirm</p>
             <ul className="text-xs text-muted-foreground space-y-2.5 list-disc pl-4">

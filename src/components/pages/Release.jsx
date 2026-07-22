@@ -5,7 +5,7 @@ import { Plus, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-import { fetchReleases, createRelease, resetCreateStatus } from "@/store/slice/release.slice"
+import { fetchReleases } from "@/store/slice/release.slice"
 
 import { ReleaseAccordion } from "./release/ReleaseAccordion"
 import { CreateReleaseSheet } from "./release/CreateReleaseSheet"
@@ -14,20 +14,11 @@ export default function Release() {
   const dispatch = useDispatch()
   const [sheetOpen, setSheetOpen] = useState(false)
 
-  const { releases, fetchStatus, createStatus } = useSelector((s) => s.release)
+  const { releases, fetchStatus } = useSelector((s) => s.release)
 
   useEffect(() => {
     if (fetchStatus === "idle") dispatch(fetchReleases({ page: 1, limit: 10 }))
   }, [fetchStatus, dispatch])
-
-  useEffect(() => {
-    if (createStatus === "succeeded") {
-      setSheetOpen(false)
-      dispatch(resetCreateStatus())
-      // Refresh the release list after a successful create
-      dispatch(fetchReleases({ page: 1, limit: 10 }))
-    }
-  }, [createStatus, dispatch])
 
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
@@ -79,8 +70,6 @@ export default function Release() {
       <CreateReleaseSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        onSubmit={(payload) => dispatch(createRelease(payload))}
-        submitting={createStatus === "loading"}
       />
     </section>
   )
