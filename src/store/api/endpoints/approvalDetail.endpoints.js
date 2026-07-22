@@ -22,6 +22,15 @@ ifgApi.injectEndpoints({
       invalidatesTags: (result, error, { version_id }) => [{ type: "ApprovalDetail", id: version_id }],
     }),
 
+    markUnderReview: build.mutation({
+      query: (version_id) => ({
+        url: API_ROUTES.APPROVALS_REVIEW,
+        method: "post",
+        data: { version_id },
+      }),
+      invalidatesTags: (result, error, version_id) => [{ type: "ApprovalDetail", id: version_id }],
+    }),
+
     submitFile: build.mutation({
       query: ({ governed_apps, clouds, category_id, file_name, change_type, description }) => ({
         url: API_ROUTES.FILE_UPLOAD_SUBMIT,
@@ -38,5 +47,6 @@ ifgApi.injectEndpoints({
 export const {
   useGetApprovalDetailQuery,
   useSubmitApprovalDecisionMutation,
+  useMarkUnderReviewMutation,
   useSubmitFileMutation,
 } = ifgApi

@@ -1,4 +1,4 @@
-import { csClient, apiClient } from "@/lib/apiClient";
+import { apiClient, csClient } from "@/lib/apiClient";
 import { API_ROUTES } from "@/lib/apiRoutes";
 
 const AuthService = {

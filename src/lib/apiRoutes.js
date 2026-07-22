@@ -15,6 +15,7 @@ export const API_ROUTES = Object.freeze({
   FILE_UPLOAD_SUBMIT:    "/ifgapi/file-upload/submit",
   APPROVALS_DETAIL:      "/ifgapi/approvals/detail",
   APPROVALS_APPROVE:     "/ifgapi/approvals/approve",
+  APPROVALS_REVIEW:      "/ifgapi/approvals/review",
 
   // Categories  (apiClient — VITE_API_URL)
   CATEGORIES_LIST:   "/ifgapi/categories/list",

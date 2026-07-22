@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import { ReleaseList } from "./release/ReleaseList"
 import { CreateReleaseSheet } from "./release/CreateReleaseSheet"
 import { useGetReleasesQuery } from "@/store/api/endpoints/release.endpoints"
+import { useEndpointPermission } from "@/hooks/useEndpointPermission"
 
 export default function Release() {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const canCreate = useEndpointPermission("ifgapi/release/create")
 
   // Page-1 data is always in cache (loaded by ReleaseList on mount)
   const { data } = useGetReleasesQuery({ page: 1, limit: 10 })
@@ -30,10 +32,12 @@ export default function Release() {
             engine uses exactly these tagged versions.
           </p>
         </div>
-        <Button onClick={() => setSheetOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create New Release
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setSheetOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create New Release
+          </Button>
+        )}
       </div>
 
       <ReleaseList />

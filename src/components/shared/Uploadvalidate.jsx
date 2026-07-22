@@ -16,6 +16,7 @@ import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors";
 import { ROUTES } from "@/lib/routes";
 import CategoryService from "@/services/category.service";
 import FileUploadService from "@/services/fileUpload.service";
+import { useEndpointPermission } from "@/hooks/useEndpointPermission";
 
 import { useGetCloudsQuery }       from "@/store/api/endpoints/app.endpoints";
 import { useGetApplicationsQuery } from "@/store/api/endpoints/app.endpoints";
@@ -40,6 +41,7 @@ export default function UploadValidatePage() {
   const { governed_apps, clouds } = useSelector(selectFilterOptions);
 
   const [submitFile]                             = useSubmitFileMutation();
+  const canSubmit = useEndpointPermission("ifgapi/file-upload/submit");
   const [submitting, setSubmitting]              = useState(false);
   const [submitResult, setSubmitResult]          = useState(null);
   const [dialogOpen, setDialogOpen]              = useState(false);
@@ -324,13 +326,15 @@ export default function UploadValidatePage() {
               <Button size="lg" variant="outline" type="button" onClick={() => navigate(-1)}>
                 Cancel
               </Button>
-              <Button size="lg" type="submit" disabled={submitting}>
-                {submitting
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <Upload className="h-4 w-4" />
-                }
-                {submitting ? "Submitting…" : "Validate & Submit"}
-              </Button>
+              {canSubmit && (
+                <Button size="lg" type="submit" disabled={submitting}>
+                  {submitting
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <Upload className="h-4 w-4" />
+                  }
+                  {submitting ? "Submitting…" : "Validate & Submit"}
+                </Button>
+              )}
             </div>
           </div>
         </div>

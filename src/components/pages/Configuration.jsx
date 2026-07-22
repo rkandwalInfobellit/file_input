@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus, ShieldCheck, Search } from "lucide-react";
+import { useEndpointPermission } from "@/hooks/useEndpointPermission";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,10 @@ export default function Configuration() {
   const [deleteCategory]       = useDeleteCategoryMutation();
   const [toggleCategoryActive] = useToggleCategoryActiveMutation();
 
+  const canCreate = useEndpointPermission("ifgapi/categories/create");
+  const canUpdate = useEndpointPermission("ifgapi/categories/update");
+  const canDelete = useEndpointPermission("ifgapi/categories/delete");
+
   const activeCount = categories.filter((c) => c.is_active).length;
 
   function handleEdit(category) {
@@ -74,7 +79,7 @@ export default function Configuration() {
     setTogglingId(null);
   }
 
-  const columns = makeColumns(handleEdit, setDeleteRule, handleToggle, togglingId);
+  const columns = makeColumns(handleEdit, setDeleteRule, handleToggle, togglingId, { canUpdate, canDelete });
 
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
@@ -108,10 +113,12 @@ export default function Configuration() {
                 className="w-48 pl-8"
               />
             </div>
-            <Button onClick={handleAdd}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add rule
-            </Button>
+            {canCreate && (
+              <Button onClick={handleAdd}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add rule
+              </Button>
+            )}
           </div>
         </div>
 

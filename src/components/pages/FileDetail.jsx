@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useEndpointPermission } from "@/hooks/useEndpointPermission";
 import {
   ArrowLeft,
   Download,
@@ -20,6 +21,7 @@ import {
   useGetApprovalDetailQuery,
   useSubmitApprovalDecisionMutation,
 } from "@/store/api/endpoints/approvalDetail.endpoints";
+import { FILE_STATUS } from "@/lib/fileStatus";
 
 // ── Presentational helpers ───────────────────────────────────────────────────
 
@@ -56,12 +58,26 @@ export default function FileDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data, isLoading, isFetching, isError, error, refetch } = useGetApprovalDetailQuery(id);
-  const [submitDecision, { isLoading: deciding }] = useSubmitApprovalDecisionMutation();
+  const { data, isLoading, isFetching, isError, error } = useGetApprovalDetailQuery(id);
+  const [submitDecision] = useSubmitApprovalDecisionMutation();
+  const canSubmitApproval = useEndpointPermission("ifgapi/approvals/approve");
+  const reviewMarked = useRef(false);
 
   const [comment,   setComment]   = useState("");
   const [submitting, setSubmitting] = useState(null); // 'approve' | 'reject' | null
   const [decision,  setDecision]  = useState(null);
+
+  useEffect(() => {
+    if (!data || reviewMarked.current) return
+    const loggedInEmail = Cookies.get("email") ?? ""
+    const myEntry = data.approval_details?.find(
+      (a) => a.email?.toLowerCase() === loggedInEmail.toLowerCase()
+    )
+    if (myEntry?.status === FILE_STATUS.PENDING) {
+      reviewMarked.current = true
+      submitDecision({ version_id: id, decision: FILE_STATUS.REVIEW, comment: "" })
+    }
+  }, [data, id, submitDecision])
 
   // ── Loading / error ──────────────────────────────────────────────────────
   if (isLoading || (!data && isFetching)) {
@@ -93,17 +109,25 @@ export default function FileDetail() {
     approval_details = [],
     version_history  = [],
     activity_log     = [],
-  } = data;
-
+  } = data; 
   const loggedInEmail   = Cookies.get("email") ?? "";
   const myApprovalEntry = approval_details.find(
     (a) => a.email?.toLowerCase() === loggedInEmail.toLowerCase(),
   );
   const isApprover    = !!myApprovalEntry;
-  const alreadyDecided = isApprover && myApprovalEntry.status !== "pending";
+  const alreadyDecided = isApprover && (
+    myApprovalEntry.status === FILE_STATUS.APPROVED ||
+    myApprovalEntry.status === FILE_STATUS.REJECTED
+  );
 
   const displayStatus = version?.display_status ?? version?.status ?? "—";
   const rawStatus     = version?.status ?? "";
+
+  const canStillDecide = [
+    FILE_STATUS.PENDING,
+    FILE_STATUS.REVIEW,
+    FILE_STATUS.PARTIALLY_APPROVED,
+  ].includes(rawStatus);
   const approvalMode  = version?.approval_mode ?? null;
   const downloadUrl   = version?.download_url  ?? null;
 
@@ -268,7 +292,7 @@ export default function FileDetail() {
           </div>
 
           <div>
-            {isApprover && (
+            {isApprover && canSubmitApproval && canStillDecide && (
               <>
                 <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-3">
                   {alreadyDecided || decision ? "YOUR DECISION STATUS" : "YOUR DECISION"}

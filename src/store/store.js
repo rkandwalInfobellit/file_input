@@ -1,4 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit"
+import Cookies from "js-cookie"
+import LZString from "lz-string"
+import permissionsReducer   from "./slice/permissions.slice"
 import fileCatalogReducer    from "./slice/fileCatalog.slice"
 import filterOptionsReducer  from "./slice/filterOptions.slice"
 import versioningReducer     from "./slice/versioning.slice"
@@ -22,8 +25,28 @@ import "./api/endpoints/versioning.endpoints"
 import "./api/endpoints/release.endpoints"
 import "./api/endpoints/approvalDetail.endpoints"
 
+// Read permissions from cookie synchronously so the store is already populated
+// before the first render — prevents the redirect-to-not-authorized on refresh.
+function loadPermissionsFromCookie() {
+  try {
+    const compressed = Cookies.get("IFG_features")
+    if (!compressed) return {}
+    const json = LZString.decompressFromEncodedURIComponent(compressed)
+    const features = json ? JSON.parse(json) : []
+    const moduleKey = Cookies.get("application") || "IFG"
+    return { featuresData: { [moduleKey]: { features } } }
+  } catch {
+    return {}
+  }
+}
+
 export const store = configureStore({
+  preloadedState: {
+    permissions: loadPermissionsFromCookie(),
+  },
   reducer: {
+    permissions:    permissionsReducer,
+
     // Legacy slices (UI filter state — not replaced by RTK Query)
     fileCatalog:    fileCatalogReducer,
     filterOptions:  filterOptionsReducer,
