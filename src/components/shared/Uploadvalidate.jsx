@@ -13,39 +13,40 @@ import { Combobox } from "@/components/ui/combobox-select";
 import { Badge } from "@/components/ui/badge";
 
 import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors";
-import { fetchClouds, fetchApplications } from "@/store/slice/app.slice";
 import { ROUTES } from "@/lib/routes";
 import CategoryService from "@/services/category.service";
 import FileUploadService from "@/services/fileUpload.service";
+
+import { useGetCloudsQuery }       from "@/store/api/endpoints/app.endpoints";
+import { useGetApplicationsQuery } from "@/store/api/endpoints/app.endpoints";
+import { useSubmitFileMutation }   from "@/store/api/endpoints/approvalDetail.endpoints";
 
 import {
   uploadSchema,
   CHANGE_TYPE_OPTIONS,
   bumpVersion,
 } from "./upload/uploadSchema";
-import { SelectField } from "./upload/SelectField";
+import { SelectField }  from "./upload/SelectField";
 import { FileDropZone } from "./upload/FileDropZone";
 import { ResultDialog } from "./upload/ResultDialog";
 
 export default function UploadValidatePage() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+
+  // Ensure clouds + apps are in cache (served to selectFilterOptions selector)
+  useGetCloudsQuery();
+  useGetApplicationsQuery();
 
   const { governed_apps, clouds } = useSelector(selectFilterOptions);
 
-  const [submitting, setSubmitting]       = useState(false);
-  const [submitResult, setSubmitResult]   = useState(null);
-  const [dialogOpen, setDialogOpen]       = useState(false);
-  const [selectedCategory, setSelectedCategory]   = useState(null); // full { category_id, display_name } object
-  const [latestVersion, setLatestVersion]         = useState(null);
+  const [submitFile]                             = useSubmitFileMutation();
+  const [submitting, setSubmitting]              = useState(false);
+  const [submitResult, setSubmitResult]          = useState(null);
+  const [dialogOpen, setDialogOpen]              = useState(false);
+  const [selectedCategory, setSelectedCategory]  = useState(null);
+  const [latestVersion, setLatestVersion]        = useState(null);
   const [templateDownloadUrl, setTemplateDownloadUrl] = useState(null);
-  const [versionLoading, setVersionLoading]       = useState(false);
-
-  // Fetch apps + clouds on mount (same as FileCatalog)
-  useEffect(() => {
-    dispatch(fetchClouds());
-    dispatch(fetchApplications());
-  }, [dispatch]);
+  const [versionLoading, setVersionLoading]      = useState(false);
 
   const {
     control,
@@ -65,20 +66,19 @@ export default function UploadValidatePage() {
     },
   });
 
-  const watchApps      = watch("governed_apps");
-  const watchClouds    = watch("clouds");
-  const watchCategory  = watch("category_id");
+  const watchApps       = watch("governed_apps");
+  const watchClouds     = watch("clouds");
+  const watchCategory   = watch("category_id");
   const watchChangeType = watch("change_type");
 
-  const appAndCloudSelected  = watchApps.length > 0 && watchClouds.length > 0;
-  const categorySelected     = !!watchCategory;
-  const changeTypeEnabled    = categorySelected && latestVersion !== null;
+  const appAndCloudSelected = watchApps.length > 0 && watchClouds.length > 0;
+  const categorySelected    = !!watchCategory;
+  const changeTypeEnabled   = categorySelected && latestVersion !== null;
 
   const newVersion = watchChangeType && watchChangeType !== "no-change"
     ? bumpVersion(latestVersion ?? "0.0.0", watchChangeType)
     : (latestVersion ?? "0.0.0");
 
-  // When category changes, fetch its latest_version
   useEffect(() => {
     if (!watchCategory) {
       setSelectedCategory(null);
@@ -100,15 +100,11 @@ export default function UploadValidatePage() {
       .finally(() => setVersionLoading(false));
   }, [watchCategory, setValue]);
 
-  // Async category search for Combobox
   const searchCategories = useCallback(async (query, page) => {
     const result = await CategoryService.list({
-      page,
-      limit: 20,
-      search: query,
-      is_active: true,
+      page, limit: 20, search: query, is_active: true,
       governed_apps: watchApps,
-      clouds: watchClouds,
+      clouds:        watchClouds,
     });
     return { items: result.items, total_pages: result.total_pages };
   }, [watchApps, watchClouds]);
@@ -120,14 +116,14 @@ export default function UploadValidatePage() {
   async function onSubmit(data) {
     setSubmitting(true);
     try {
-      const response = await FileUploadService.submit({
+      const response = await submitFile({
         governed_apps: data.governed_apps,
         clouds:        data.clouds,
         category_id:   data.category_id,
         file_name:     data.file.name,
         change_type:   data.change_type,
         description:   data.description ?? "",
-      });
+      }).unwrap();
 
       const uploadUrl = response?.upload_url ?? response?.template_upload_url;
       if (uploadUrl) {
@@ -138,7 +134,7 @@ export default function UploadValidatePage() {
       setDialogOpen(true);
       setTimeout(() => navigate(ROUTES.FILE_CATALOG), 2000);
     } catch (err) {
-      setSubmitResult({ status: "error", message: err.message || "Submission failed. Please try again." });
+      setSubmitResult({ status: "error", message: err?.data ?? "Submission failed. Please try again." });
       setDialogOpen(true);
     } finally {
       setSubmitting(false);
@@ -166,12 +162,9 @@ export default function UploadValidatePage() {
         <div className="flex gap-6 items-start">
           <div className="flex-1 rounded-lg border bg-card p-7">
 
-            {/* Application + Cloud */}
             <div className="grid grid-cols-2 gap-5 mb-5">
               <Field>
-                <FieldLabel className="text-[11px] font-semibold tracking-wider">
-                  APPLICATION
-                </FieldLabel>
+                <FieldLabel className="text-[11px] font-semibold tracking-wider">APPLICATION</FieldLabel>
                 <Controller
                   name="governed_apps"
                   control={control}
@@ -193,9 +186,7 @@ export default function UploadValidatePage() {
               </Field>
 
               <Field>
-                <FieldLabel className="text-[11px] font-semibold tracking-wider">
-                  CLOUD
-                </FieldLabel>
+                <FieldLabel className="text-[11px] font-semibold tracking-wider">CLOUD</FieldLabel>
                 <Controller
                   name="clouds"
                   control={control}
@@ -217,7 +208,6 @@ export default function UploadValidatePage() {
               </Field>
             </div>
 
-            {/* File Category — disabled until app + cloud selected */}
             <div className="mb-5">
               <Field>
                 <FieldLabel className="text-[11px] font-semibold tracking-wider">
@@ -231,9 +221,9 @@ export default function UploadValidatePage() {
                       onSearch={searchCategories}
                       value={selectedCategory ? [selectedCategory] : []}
                       onChange={(selected) => {
-                        const cat = selected[0] ?? null
-                        setSelectedCategory(cat)
-                        field.onChange(cat?.category_id ?? "")
+                        const cat = selected[0] ?? null;
+                        setSelectedCategory(cat);
+                        field.onChange(cat?.category_id ?? "");
                       }}
                       getValue={(o) => o.category_id}
                       getLabel={(o) => o.display_name}
@@ -259,7 +249,6 @@ export default function UploadValidatePage() {
               )}
             </div>
 
-            {/* Change Type + Version preview */}
             <div className="flex gap-4 items-end mb-2">
               <div className="flex-1">
                 <SelectField
@@ -270,7 +259,7 @@ export default function UploadValidatePage() {
                   hasError={!!errors.change_type}
                   options={CHANGE_TYPE_OPTIONS}
                   placeholder={
-                    !categorySelected  ? "Select category first" :
+                    !categorySelected      ? "Select category first" :
                     latestVersion === null ? "Loading version…" :
                     "Select change type"
                   }
@@ -278,7 +267,6 @@ export default function UploadValidatePage() {
                 />
               </div>
 
-              {/* Version row: spinner while loading, hidden until version is ready */}
               <div className="flex gap-2 items-center pb-1.5 shrink-0 min-h-9">
                 {categorySelected && versionLoading && (
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -306,16 +294,12 @@ export default function UploadValidatePage() {
               change / carried forward" keeps the version.
             </p>
 
-            {/* File drop zone */}
             <Field className="mb-6">
-              <FieldLabel className="text-[11px] font-semibold tracking-wider">
-                FILE
-              </FieldLabel>
+              <FieldLabel className="text-[11px] font-semibold tracking-wider">FILE</FieldLabel>
               <FileDropZone control={control} errors={errors} />
               <FieldError errors={errors.file ? [errors.file] : []} />
             </Field>
 
-            {/* Description */}
             <Field>
               <FieldLabel htmlFor="description" className="text-[11px] font-semibold tracking-wider">
                 DESCRIPTION

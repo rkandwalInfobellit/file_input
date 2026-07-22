@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { useDispatch, useSelector } from "react-redux"
 import { z } from "zod"
 import { Tag, X, Loader2, UploadCloud, FileText } from "lucide-react"
 import { toast } from "sonner"
@@ -21,10 +20,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 
-import { selectCloudOptions, selectApplicationOptions } from "@/store/selectors/app.selectors"
-import { fetchClouds, fetchApplications } from "@/store/slice/app.slice"
-import { createCategory, updateCategory } from "@/store/slice/category.slice"
-import { selectCategorySaving } from "@/store/selectors/category.selectors"
+import { useGetCloudsQuery }       from "@/store/api/endpoints/app.endpoints"
+import { useGetApplicationsQuery } from "@/store/api/endpoints/app.endpoints"
+import {
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+} from "@/store/api/endpoints/category.endpoints"
 import AppService from "@/services/app.service"
 
 import { APPROVE_TYPES, EMPTY_FORM, slugify } from "./constants"
@@ -122,11 +123,17 @@ async function searchApprovers(query, page) {
 }
 
 // ── Main sheet ────────────────────────────────────────────────────────────────
-export default function RuleSheet({ open, onClose, initial, onSaved }) {
-  const dispatch     = useDispatch()
-  const saving       = useSelector(selectCategorySaving)
-  const cloudOptions = useSelector(selectCloudOptions)
-  const appOptions   = useSelector(selectApplicationOptions)
+export default function RuleSheet({ open, onClose, initial }) {
+  // RTK Query — clouds + apps (served from cache if already fetched)
+  const { data: cloudsData }  = useGetCloudsQuery(undefined, { skip: !open })
+  const { data: appsData }    = useGetApplicationsQuery(undefined, { skip: !open })
+
+  const cloudOptions = (cloudsData ?? []).map((c) => ({ value: c.cloud_id,  label: c.display_name }))
+  const appOptions   = (appsData   ?? []).map((a) => ({ value: a.name,      label: a.display_name }))
+
+  const [createCategory, { isLoading: creating }] = useCreateCategoryMutation()
+  const [updateCategory, { isLoading: updating }] = useUpdateCategoryMutation()
+  const saving = creating || updating
 
   const isEdit = !!initial
 
@@ -138,29 +145,20 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
       setErrors({})
       setForm(initial ? {
         display_name:  initial.display_name  ?? "",
-        governed_apps: initial.governed_apps ?? [],   // string[]
-        clouds:        initial.clouds        ?? [],   // string[]
+        governed_apps: initial.governed_apps ?? [],
+        clouds:        initial.clouds        ?? [],
         approval_mode: initial.approval_mode ?? "",
-        approvers:     initial.approvers     ?? [],   // [{ type, email, full_name }]
+        approvers:     initial.approvers     ?? [],
         file:          null,
       } : EMPTY_FORM)
     }
   }, [open, initial])
 
-  useEffect(() => {
-    if (open) {
-      if (cloudOptions.length === 0)  dispatch(fetchClouds())
-      if (appOptions.length === 0)    dispatch(fetchApplications())
-    }
-  }, [open, cloudOptions.length, appOptions.length, dispatch])
-
   function set(key, val) {
     setForm((f) => ({ ...f, [key]: val }))
-    // Clear field error on change
     if (errors[key]) setErrors((e) => { const n = { ...e }; delete n[key]; return n })
   }
 
-  // ── Zod validate and return flat error map ────────────────────────────────
   function validate() {
     const schema = isEdit ? updateSchema : createSchema
     const data   = isEdit
@@ -185,54 +183,48 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
     return flat
   }
 
-  const canSave = !saving
-
   async function handleSave() {
     const errs = validate()
     if (errs) { setErrors(errs); toast.error("Please fix the errors before saving"); return }
 
     if (isEdit) {
       try {
-        await dispatch(updateCategory({
+        await updateCategory({
           category_id:   initial.category_id,
           approval_mode: form.approval_mode,
           approvers:     form.approvers,
           is_active:     initial.is_active ?? true,
-        })).unwrap()
+        }).unwrap()
         toast.success("Category updated")
-        onSaved(); onClose()
-      } catch (err) { toast.error(err ?? "Update failed") }
+        onClose()
+      } catch (err) { toast.error(err?.data ?? "Update failed") }
     } else {
       const category_id = slugify(form.display_name)
       try {
-        await dispatch(createCategory({
+        await createCategory({
           payload: {
             category_id,
             display_name:  form.display_name.trim(),
-            governed_apps: form.governed_apps,   // string[]
-            clouds:        form.clouds,           // string[]
+            governed_apps: form.governed_apps,
+            clouds:        form.clouds,
             approval_mode: form.approval_mode,
             approvers:     form.approvers,
             ...(form.file ? { template_file_name: form.file.name } : {}),
           },
           file: form.file,
-        })).unwrap()
+        }).unwrap()
         toast.success("Category created")
-        onSaved(); onClose()
-      } catch (err) { toast.error(err ?? "Create failed") }
+        onClose()
+      } catch (err) { toast.error(err?.data ?? "Create failed") }
     }
   }
 
-  // ── Combobox bridge helpers ───────────────────────────────────────────────
-  // governed_apps / clouds: form stores string[], Combobox works with option objects
-  // → convert on the way in (value prop) and out (onChange)
   const appsAsObjects   = form.governed_apps.map((v) => appOptions.find((o) => o.value === v) ?? { value: v, label: v })
   const cloudsAsObjects = form.clouds.map((v) => cloudOptions.find((o) => o.value === v) ?? { value: v, label: v })
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <SheetContent side="right" className="flex flex-col w-full sm:max-w-md p-0">
-        {/* Header */}
         <SheetHeader className="flex-row items-center justify-between border-b px-5 py-4 gap-4">
           <div className="flex items-center gap-2">
             <Tag className="h-4 w-4 text-primary" />
@@ -245,10 +237,8 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
           </button>
         </SheetHeader>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
 
-          {/* Apps — stores string[] */}
           <div>
             <Combobox
               options={appOptions}
@@ -262,7 +252,6 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
             {errors.governed_apps && <p className="mt-1 text-xs text-destructive">{errors.governed_apps}</p>}
           </div>
 
-          {/* Clouds — stores string[] */}
           <div>
             <Combobox
               options={cloudOptions}
@@ -276,22 +265,17 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
             {errors.clouds && <p className="mt-1 text-xs text-destructive">{errors.clouds}</p>}
           </div>
 
-          {/* Category name — no spaces allowed */}
           <div>
             <Input
               placeholder="Enter the file category (no spaces)"
               value={form.display_name}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\s/g, "")
-                set("display_name", val)
-              }}
+              onChange={(e) => { const val = e.target.value.replace(/\s/g, ""); set("display_name", val) }}
               disabled={isEdit}
               className="h-10"
             />
             {errors.display_name && <p className="mt-1 text-xs text-destructive">{errors.display_name}</p>}
           </div>
 
-          {/* Approve Type — native select, selected value shown as plain text */}
           <div>
             <Select value={form.approval_mode} onValueChange={(v) => set("approval_mode", v)}>
               <SelectTrigger className={`h-10 w-full capitalize ${errors.approval_mode ? "border-destructive" : ""}`}>
@@ -308,7 +292,6 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
             {errors.approval_mode && <p className="mt-1 text-xs text-destructive">{errors.approval_mode}</p>}
           </div>
 
-          {/* Approvers — stores [{ type, email, full_name }] */}
           <div>
             <Combobox
               value={form.approvers}
@@ -321,7 +304,6 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
             {errors.approvers && <p className="mt-1 text-xs text-destructive">{errors.approvers}</p>}
           </div>
 
-          {/* File upload */}
           <div>
             <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-1.5">UPLOAD TEMPLATE</p>
             {isEdit && initial?.template_s3_key ? (
@@ -345,10 +327,9 @@ export default function RuleSheet({ open, onClose, initial, onSaved }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-2 border-t px-5 py-4">
           <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!canSave || saving}>
+          <Button onClick={handleSave} disabled={saving}>
             {saving
               ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Saving…</>
               : isEdit ? "Update" : "Save"}

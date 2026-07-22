@@ -1,14 +1,17 @@
 import { useState } from "react"
-import { useSelector } from "react-redux"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ReleaseList } from "./release/ReleaseList"
 import { CreateReleaseSheet } from "./release/CreateReleaseSheet"
+import { useGetReleasesQuery } from "@/store/api/endpoints/release.endpoints"
 
 export default function Release() {
   const [sheetOpen, setSheetOpen] = useState(false)
-  const releases = useSelector((s) => s.release.releases)
+
+  // Page-1 data is always in cache (loaded by ReleaseList on mount)
+  const { data } = useGetReleasesQuery({ page: 1, limit: 10 })
+  const releases = data?.items ?? []
   const currentVersion = releases.find((r) => r.isActive)?.version ?? "v0.0.1"
 
   return (

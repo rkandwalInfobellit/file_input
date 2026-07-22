@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { GitBranch, Loader2, File } from "lucide-react";
 
@@ -9,16 +9,20 @@ import { FieldLabel, Field } from "@/components/ui/field";
 import { Separator } from "../ui/separator";
 import { DataTable } from "@/components/DataTable/DataTable";
 
-import { fetchClouds, fetchApplications } from "@/store/slice/app.slice";
 import {
-  fetchVersionFileOptions,
-  fetchVersionHistory,
   setVersioningAppFilter,
   setVersioningCloudFilter,
   setVersioningCategoryFilter,
   clearVersionDetail,
 } from "@/store/slice/versioning.slice";
 import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors";
+
+import { useGetCloudsQuery }           from "@/store/api/endpoints/app.endpoints";
+import { useGetApplicationsQuery }     from "@/store/api/endpoints/app.endpoints";
+import {
+  useLazyGetVersionFileOptionsQuery,
+  useLazyGetVersionHistoryQuery,
+} from "@/store/api/endpoints/versioning.endpoints";
 import CategoryService from "@/services/category.service";
 
 // ---------------------------------------------------------------------------
@@ -139,28 +143,35 @@ const historyColumns = [
 // ---------------------------------------------------------------------------
 export default function Versioning() {
   const dispatch = useDispatch();
+
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize]   = useState(10);
+  const [pageSize,  setPageSize]  = useState(10);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedCategoryObj, setSelectedCategoryObj] = useState(null);
+
+  // Populate cloud + app options (served from cache after first load)
+  useGetCloudsQuery();
+  useGetApplicationsQuery();
 
   const { governed_apps, clouds } = useSelector(selectFilterOptions);
-  const {
-    items, totalItems, totalPages,
-    fetchStatus, error,
-    filters,
-    detail, detailStatus, detailError,
-  } = useSelector((s) => s.versioning);
+  // Keep versioning filter state in Redux (unchanged — button-gated, not filter-driven)
+  const { filters } = useSelector((s) => s.versioning);
 
-  useEffect(() => {
-    dispatch(fetchClouds());
-    dispatch(fetchApplications());
-  }, [dispatch]);
+  // Lazy queries — only fire on explicit user action (button click / row click)
+  const [fetchFileOptions, fileOptionsResult] = useLazyGetVersionFileOptionsQuery();
+  const [fetchHistory,     historyResult]     = useLazyGetVersionHistoryQuery();
+
+  const fileOptionsData = fileOptionsResult.data;
+  const items       = fileOptionsData?.items       ?? [];
+  const totalItems  = fileOptionsData?.total_items ?? 0;
+  const totalPages  = fileOptionsData?.total_pages  ?? 1;
+  const detail      = historyResult.data ?? (fileOptionsData?.mode === "history" ? fileOptionsData : null);
 
   const appOptions   = governed_apps.map((a) => ({ value: a, label: a }));
   const cloudOptions = clouds.map((c) => ({ value: c, label: c }));
 
   const appAndCloudSelected = !!filters.governed_app && !!filters.cloud;
-  const canSubmit = appAndCloudSelected && !!filters.category_id && fetchStatus !== "loading";
+  const canSubmit = appAndCloudSelected && !!filters.category_id && !fileOptionsResult.isFetching;
 
   const searchCategories = useCallback(async (query, page) => {
     const result = await CategoryService.list({
@@ -171,47 +182,60 @@ export default function Versioning() {
     return { items: result.items, total_pages: result.total_pages };
   }, [filters.governed_app, filters.cloud]);
 
-  const [selectedCategoryObj, setSelectedCategoryObj] = useState(null);
-
-  useEffect(() => {
+  function handleAppChange(val) {
+    dispatch(setVersioningAppFilter(val));
     setSelectedCategoryObj(null);
     setSelectedFile(null);
-    dispatch(clearVersionDetail());
-  }, [filters.governed_app, filters.cloud, dispatch]);
+    fileOptionsResult.reset?.();
+    historyResult.reset?.();
+  }
+
+  function handleCloudChange(val) {
+    dispatch(setVersioningCloudFilter(val));
+    setSelectedCategoryObj(null);
+    setSelectedFile(null);
+    fileOptionsResult.reset?.();
+    historyResult.reset?.();
+  }
 
   function handleSubmit() {
     setPageIndex(0);
     setSelectedFile(null);
-    dispatch(clearVersionDetail());
-    dispatch(fetchVersionFileOptions({
+    fetchFileOptions({
       governed_app: filters.governed_app,
       cloud:        filters.cloud,
       category_id:  filters.category_id,
-      page: 1, limit: pageSize,
-    }));
+      page: 1,
+      limit: pageSize,
+    });
   }
 
   function handlePageChange(newIndex) {
     setPageIndex(newIndex);
     setSelectedFile(null);
-    dispatch(clearVersionDetail());
-    dispatch(fetchVersionFileOptions({
+    fetchFileOptions({
       governed_app: filters.governed_app,
       cloud:        filters.cloud,
       category_id:  filters.category_id,
-      page: newIndex + 1, limit: pageSize,
-    }));
+      page: newIndex + 1,
+      limit: pageSize,
+    });
   }
 
   function handleRowClick(fileItem) {
     if (selectedFile?.file_id === fileItem.file_id) {
       setSelectedFile(null);
-      dispatch(clearVersionDetail());
       return;
     }
     setSelectedFile(fileItem);
-    dispatch(fetchVersionHistory({ file_id: fileItem.file_id, page: 1, limit: 50 }));
+    fetchHistory({ file_id: fileItem.file_id, page: 1, limit: 50 });
   }
+
+  const isLoadingOptions = fileOptionsResult.isFetching;
+  const isLoadingHistory = historyResult.isFetching;
+  const hasFileOptions   = fileOptionsResult.isSuccess && items.length > 0;
+  const showHistory      = selectedFile || (fileOptionsResult.isSuccess && detail?.mode === "history");
+
   return (
     <section className="flex flex-col gap-6 px-4 py-1">
       <div>
@@ -235,7 +259,7 @@ export default function Versioning() {
             <Combobox
               options={appOptions}
               value={filters.governed_app ? [{ value: filters.governed_app, label: filters.governed_app }] : []}
-              onChange={(selected) => dispatch(setVersioningAppFilter(selected[0]?.value ?? null))}
+              onChange={(selected) => handleAppChange(selected[0]?.value ?? null)}
               getValue={(o) => o.value}
               getLabel={(o) => o.label}
               placeholder="Select application"
@@ -247,7 +271,7 @@ export default function Versioning() {
             <Combobox
               options={cloudOptions}
               value={filters.cloud ? [{ value: filters.cloud, label: filters.cloud }] : []}
-              onChange={(selected) => dispatch(setVersioningCloudFilter(selected[0]?.value ?? null))}
+              onChange={(selected) => handleCloudChange(selected[0]?.value ?? null)}
               getValue={(o) => o.value}
               getLabel={(o) => o.label}
               placeholder={filters.governed_app ? "Select cloud" : "Select app first"}
@@ -275,7 +299,7 @@ export default function Versioning() {
         </div>
         <div className="flex justify-end">
           <Button disabled={!canSubmit} onClick={handleSubmit}>
-            {fetchStatus === "loading"
+            {isLoadingOptions
               ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading…</>
               : "Fetch versions"
             }
@@ -283,20 +307,18 @@ export default function Versioning() {
         </div>
       </div>
 
-      {fetchStatus === "failed" && (
-        <p className="text-sm text-destructive">{error}</p>
+      {fileOptionsResult.isError && (
+        <p className="text-sm text-destructive">{fileOptionsResult.error?.data ?? "Failed to load files"}</p>
       )}
 
-      {/* Loading spinner (before mode is known) */}
-      {fetchStatus === "loading" && (
+      {isLoadingOptions && (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading…
         </div>
       )}
 
-      {/* mode === "file_options": show file list for row-click drill-down */}
-      {fetchStatus === "succeeded" && items.length > 0 && (
+      {hasFileOptions && (
         <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-4 border-b">
             <GitBranch className="h-5 w-5 text-muted-foreground shrink-0" />
@@ -326,8 +348,7 @@ export default function Versioning() {
         </div>
       )}
 
-      {/* History panel — shown when row clicked (file_options mode) OR API returned history directly */}
-      {(selectedFile || (fetchStatus === "succeeded" && detail?.mode === "history")) && (
+      {showHistory && (
         <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-4 border-b">
             <GitBranch className="h-5 w-5 text-primary shrink-0" />
@@ -343,8 +364,8 @@ export default function Versioning() {
           <DataTable
             columns={historyColumns}
             data={detail?.versions ?? []}
-            loading={detailStatus === "loading"}
-            error={detailStatus === "failed" ? detailError : null}
+            loading={isLoadingHistory}
+            error={historyResult.isError ? (historyResult.error?.data ?? "Failed to load history") : null}
             emptyMessage="No versions found for this file."
             className="border-none"
           />

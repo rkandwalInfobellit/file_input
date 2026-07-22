@@ -1,5 +1,3 @@
-import { useEffect } from "react"
-import { useDispatch, useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { Bell, ChevronDown } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
@@ -28,10 +26,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import {
-  fetchNotifications,
-  markNotificationRead,
-  clearNotifications,
-} from "@/store/slice/notification.slice"
+  useGetNotificationsQuery,
+  useMarkNotificationsReadMutation,
+  useClearNotificationsMutation,
+} from "@/store/api/endpoints/notification.endpoints"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -57,7 +55,6 @@ function NotificationItem({ item, onRead }) {
         !item.is_read && "bg-primary/5"
       )}
     >
-      {/* Row 1: actor name + timestamp */}
       <div className="flex items-center justify-between gap-2 mb-0.5">
         <span className="text-xs font-semibold text-foreground truncate">
           {item.actor_full_name ?? "System"}
@@ -67,7 +64,6 @@ function NotificationItem({ item, onRead }) {
         </span>
       </div>
 
-      {/* Row 2: title + unread dot */}
       <div className="flex items-start justify-between gap-2 mb-0.5">
         <p className="text-sm font-medium text-foreground leading-snug line-clamp-1">
           {item.title}
@@ -77,12 +73,10 @@ function NotificationItem({ item, onRead }) {
         )}
       </div>
 
-      {/* Row 3: message */}
       <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-1.5">
         {item.message}
       </p>
 
-      {/* Row 4: actor_role badge */}
       {item.actor_role && (
         <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize font-normal">
           {item.actor_role}
@@ -96,9 +90,14 @@ function NotificationItem({ item, onRead }) {
 // Header
 // ---------------------------------------------------------------------------
 export default function Header() {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { items, unreadCount, fetchStatus } = useSelector((s) => s.notifications)
+
+  const { data, isLoading } = useGetNotificationsQuery({ page: 1, limit: 20, is_read: false })
+  const items       = data?.items       ?? []
+  const unreadCount = data?.unread_count ?? 0
+
+  const [markRead] = useMarkNotificationsReadMutation()
+  const [clear]    = useClearNotificationsMutation()
 
   const user = getUser()
   const displayName = user.email || user.username || "User"
@@ -110,14 +109,10 @@ export default function Header() {
     .slice(0, 2)
     .toUpperCase()
 
-  useEffect(() => {
-    dispatch(fetchNotifications())
-  }, [dispatch])
-
   function handleRead(item) {
     const versionId = item.metadata?.version_id
     if (!item.is_read) {
-      dispatch(markNotificationRead({ notification_ids: [item.notification_id] }))
+      markRead({ notification_ids: [item.notification_id], type: "individual" })
     }
     if (versionId) {
       navigate(ROUTES.FILE_DETAIL(versionId))
@@ -126,15 +121,14 @@ export default function Header() {
 
   function handleReadAll() {
     if (!items.some((n) => !n.is_read)) return
-    dispatch(markNotificationRead({ notification_ids: [], type: "all" }))
+    markRead({ notification_ids: [], type: "all" })
   }
 
   function handleClearAll() {
     if (!items.length) return
-    dispatch(clearNotifications({ notification_ids: items.map((n) => n.notification_id), type: "all" }))
+    clear({ notification_ids: items.map((n) => n.notification_id), type: "all" })
   }
 
-  const loading = fetchStatus === "loading"
   const allRead = !items.some((n) => !n.is_read)
 
   return (
@@ -167,12 +161,7 @@ export default function Header() {
             }
           />
 
-          <PopoverContent
-            side="bottom"
-            align="end"
-            className="w-95 p-0 gap-0"
-          >
-            {/* Panel header */}
+          <PopoverContent side="bottom" align="end" className="w-95 p-0 gap-0">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold text-popover-foreground">Notifications</p>
@@ -186,9 +175,8 @@ export default function Header() {
 
             <Separator />
 
-            {/* Notification list */}
             <ScrollArea className="h-100">
-              {loading && items.length === 0 ? (
+              {isLoading && items.length === 0 ? (
                 <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
                   Loading…
                 </div>
@@ -211,13 +199,11 @@ export default function Header() {
 
             <Separator />
 
-            {/* Footer: mark all read + clear all */}
             <div className="grid grid-cols-2 gap-2 p-1">
               <Button
-                // variant="secondary"
                 size="sm"
                 className="text-xs h-8"
-                disabled={allRead || loading}
+                disabled={allRead || isLoading}
                 onClick={handleReadAll}
               >
                 Mark all read
@@ -226,7 +212,7 @@ export default function Header() {
                 variant="destructive"
                 size="sm"
                 className="text-xs h-8"
-                disabled={!items.length || loading}
+                disabled={!items.length || isLoading}
                 onClick={handleClearAll}
               >
                 Clear all

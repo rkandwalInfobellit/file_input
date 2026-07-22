@@ -1,5 +1,4 @@
-import { useEffect, useState, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
 import { Plus, ShieldCheck, Search } from "lucide-react";
 import { toast } from "sonner";
 
@@ -8,63 +7,40 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/DataTable/DataTable";
 
 import {
-  fetchCategories,
-  deleteCategory,
-  toggleCategoryActive,
-} from "@/store/slice/category.slice";
-import {
-  selectCategories,
-  selectCategoryStatus,
-  selectCategoryMeta,
-} from "@/store/selectors/category.selectors";
+  useGetCategoriesQuery,
+  useDeleteCategoryMutation,
+  useToggleCategoryActiveMutation,
+} from "@/store/api/endpoints/category.endpoints";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import { makeColumns } from "./configuration/columns";
 import RuleSheet from "./configuration/RuleSheet";
-import DeleteDialog from "./configuration/DeleteDialog"; 
+import DeleteDialog from "./configuration/DeleteDialog";
 
 const PAGE_SIZE = 10;
 
 export default function Configuration() {
-  const dispatch = useDispatch();
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize,  setPageSize]  = useState(PAGE_SIZE);
+  const [search,    setSearch]    = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
 
-  const categories = useSelector(selectCategories);
-  const status = useSelector(selectCategoryStatus);
-  const { totalItems } = useSelector(selectCategoryMeta);
+  const [sheetOpen,   setSheetOpen]   = useState(false);
+  const [editRule,    setEditRule]     = useState(null);
+  const [deleteRule,  setDeleteRule]   = useState(null);
+  const [togglingId,  setTogglingId]   = useState(null);
 
-  const [pageIndex, setPageIndex] = useState(0); // 0-based for DataTable
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [search, setSearch] = useState("");
-  const searchTimer = useRef(null);
+  const { data, isLoading, isError } = useGetCategoriesQuery({
+    page:   pageIndex + 1,
+    limit:  pageSize,
+    search: debouncedSearch,
+  });
 
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editRule, setEditRule] = useState(null);
-  const [deleteRule, setDeleteRule] = useState(null);
-  const [togglingId, setTogglingId] = useState(null);
+  const categories = data?.items       ?? [];
+  const totalItems = data?.total_items ?? 0;
 
-  function load(pg = pageIndex + 1, q = search) {
-    dispatch(
-      fetchCategories({
-        page: pg,
-        limit: pageSize,
-        ...(q ? { search: q } : {}),
-      }),
-    );
-  }
-
-  // Reload when page or pageSize changes
-  useEffect(() => {
-    load(pageIndex + 1);
-  }, [pageIndex, pageSize]); // eslint-disable-line
-
-  // API-side search with debounce
-  function handleSearch(val) {
-    setSearch(val);
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setPageIndex(0);
-      load(1, val);
-    }, 350);
-  }
+  const [deleteCategory]       = useDeleteCategoryMutation();
+  const [toggleCategoryActive] = useToggleCategoryActiveMutation();
 
   const activeCount = categories.filter((c) => c.is_active).length;
 
@@ -79,12 +55,11 @@ export default function Configuration() {
 
   async function handleDelete(categoryId) {
     try {
-      await dispatch(deleteCategory(categoryId)).unwrap();
+      await deleteCategory(categoryId).unwrap();
       toast.success("Category deleted");
       if (categories.length === 1 && pageIndex > 0) setPageIndex((p) => p - 1);
-      else load();
     } catch (err) {
-      toast.error(err ?? "Delete failed");
+      toast.error(err?.data ?? "Delete failed");
     }
     setDeleteRule(null);
   }
@@ -92,19 +67,14 @@ export default function Configuration() {
   async function handleToggle(categoryId, isActive) {
     setTogglingId(categoryId);
     try {
-      await dispatch(toggleCategoryActive({ categoryId, isActive })).unwrap();
+      await toggleCategoryActive({ categoryId, isActive }).unwrap();
     } catch (err) {
-      toast.error(err ?? "Failed to update status");
+      toast.error(err?.data ?? "Failed to update status");
     }
     setTogglingId(null);
   }
 
-  const columns = makeColumns(
-    handleEdit,
-    setDeleteRule,
-    handleToggle,
-    togglingId,
-  );
+  const columns = makeColumns(handleEdit, setDeleteRule, handleToggle, togglingId);
 
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
@@ -116,15 +86,12 @@ export default function Configuration() {
         </p>
       </div>
 
-      {/* Card header — outside DataTable so we keep the Add button */}
       <div className="rounded-lg border bg-card">
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
-              <div className="font-semibold text-sm">
-                Role-Based Approver Rules
-              </div>
+              <div className="font-semibold text-sm">Role-Based Approver Rules</div>
               <div className="text-xs text-muted-foreground">
                 {activeCount} active · {totalItems} total
               </div>
@@ -137,7 +104,7 @@ export default function Configuration() {
               <Input
                 placeholder="Search categories..."
                 value={search}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPageIndex(0); }}
                 className="w-48 pl-8"
               />
             </div>
@@ -148,34 +115,26 @@ export default function Configuration() {
           </div>
         </div>
 
-        {/* DataTable — no outer border (card already provides it) */}
         <DataTable
           columns={columns}
           data={categories}
-          loading={status === "loading"}
-          error={status === "failed" ? "Failed to load categories." : null}
+          loading={isLoading}
+          error={isError ? "Failed to load categories." : null}
           emptyMessage="No categories found."
-          className={"border-none"}
+          className="border-none"
           pagination={{
             pageIndex,
             pageSize,
             setPageIndex: (idx) => setPageIndex(idx),
-            setPageSize: (size) => {
-              setPageSize(size);
-              setPageIndex(0);
-            },
+            setPageSize:  (size) => { setPageSize(size); setPageIndex(0); },
           }}
         />
       </div>
 
       <RuleSheet
         open={sheetOpen}
-        onClose={() => {
-          setSheetOpen(false);
-          setEditRule(null);
-        }}
+        onClose={() => { setSheetOpen(false); setEditRule(null); }}
         initial={editRule}
-        onSaved={() => load(pageIndex + 1)}
       />
 
       <DeleteDialog

@@ -10,82 +10,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion"
 import { ReleaseBadge } from "./ReleaseBadge"
-
-const releaseFileColumns = [
-  {
-    accessorKey: "name",
-    header: "FILE",
-    cell: ({ row }) => (
-      <span className="text-sm font-medium">{row.getValue("name")}</span>
-    ),
-  },
-  {
-    id: "app",
-    header: "APP",
-    cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
-        {row.original.app || "—"}
-      </span>
-    ),
-  },
-  {
-    id: "cloud",
-    header: "CLOUD",
-    cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
-        {row.original.cloud || "—"}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "version",
-    header: "VERSION",
-    cell: ({ row }) => (
-      <Badge
-        variant="outline"
-        className="bg-primary/80 border-primary text-primary-foreground text-xs font-mono"
-      >
-        {row.getValue("version") ?? "—"}
-      </Badge>
-    ),
-  },
-  {
-    id: "versionState",
-    header: "STATE",
-    cell: ({ row }) => {
-      const state = row.original.uiState
-      return (
-        <Badge
-          variant={state === "Latest" ? "secondary" : "outline"}
-          className="text-[10px]"
-        >
-          {state ?? "—"}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "contributor",
-    header: "CONTRIBUTOR",
-    cell: ({ row }) => (
-      <span className="text-sm">{row.getValue("contributor") ?? "—"}</span>
-    ),
-  },
-  {
-    accessorKey: "approvedDate",
-    header: "APPROVED DATE",
-    cell: ({ row }) => (
-      <span className="text-sm">{row.getValue("approvedDate") ?? "—"}</span>
-    ),
-  },
-  {
-    accessorKey: "approvedBy",
-    header: "APPROVED BY",
-    cell: ({ row }) => (
-      <span className="text-sm">{row.getValue("approvedBy") ?? "—"}</span>
-    ),
-  },
-]
+import { releaseFileColumns } from "./release.columns"
 
 function fmt(isoString) {
   if (!isoString) return "—"
@@ -98,7 +23,6 @@ function fmt(isoString) {
 
 export function ReleaseAccordion({ release }) {
   const files = release.files ?? []
-
   return (
     <Accordion
       defaultValue={release.isActive ? [release.id] : []}
@@ -175,10 +99,10 @@ export function ReleaseAccordion({ release }) {
           </div>
 
           {/* Files table */}
-          {files.length > 0 ? (
+          { release.files.length > 0 ? (
             <DataTable
               columns={releaseFileColumns}
-              data={files}
+              data={ release.files}
               emptyMessage="No files in this release."
               loading={false}
               error={null}

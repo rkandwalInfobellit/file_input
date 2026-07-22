@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
 import {
   ArrowLeft,
   Download,
@@ -15,14 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { DataTable } from "@/components/DataTable/DataTable";
 
 import {
-  fetchApprovalDetail,
-  clearApprovalDetail,
-  selectApprovalDetail,
-} from "@/store/slice/approvalDetail.slice";
-import ApprovalDetailService from "@/services/approvalDetail.service";
-import { DataTable } from "@/components/DataTable/DataTable";
+  useGetApprovalDetailQuery,
+  useSubmitApprovalDecisionMutation,
+} from "@/store/api/endpoints/approvalDetail.endpoints";
 
 // ── Presentational helpers ───────────────────────────────────────────────────
 
@@ -56,26 +53,18 @@ function ApproverAvatar({ name, email }) {
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function FileDetail() {
-  const { id } = useParams(); // version_id from the route
+  const { id } = useParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
-  const { data, fetchStatus, error } = useSelector(selectApprovalDetail);
+  const { data, isLoading, isFetching, isError, error, refetch } = useGetApprovalDetailQuery(id);
+  const [submitDecision, { isLoading: deciding }] = useSubmitApprovalDecisionMutation();
 
-  const [comment, setComment] = useState("");
+  const [comment,   setComment]   = useState("");
   const [submitting, setSubmitting] = useState(null); // 'approve' | 'reject' | null
-  const [decision, setDecision] = useState(null); // 'approve' | 'reject' | null after API success
-
-  useEffect(() => {
-    dispatch(fetchApprovalDetail(id));
-    return () => {
-      dispatch(clearApprovalDetail());
-    };
-  }, [id, dispatch]);
+  const [decision,  setDecision]  = useState(null);
 
   // ── Loading / error ──────────────────────────────────────────────────────
-
-  if (fetchStatus === "loading" || fetchStatus === "idle") {
+  if (isLoading || (!data && isFetching)) {
     return (
       <section className="flex items-center gap-2 px-4 py-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…
@@ -83,14 +72,14 @@ export default function FileDetail() {
     );
   }
 
-  if (fetchStatus === "failed") {
+  if (isError) {
     return (
       <section className="px-4 py-6">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Back
         </Button>
         <p className="text-sm text-destructive">
-          {error ?? "Failed to load detail."}
+          {error?.data ?? "Failed to load detail."}
         </p>
       </section>
     );
@@ -102,35 +91,30 @@ export default function FileDetail() {
     file,
     version,
     approval_details = [],
-    version_history = [],
-    activity_log = [],
+    version_history  = [],
+    activity_log     = [],
   } = data;
 
-  // ── Approver check via cookie ────────────────────────────────────────────
-  const loggedInEmail = Cookies.get("email") ?? "";
+  const loggedInEmail   = Cookies.get("email") ?? "";
   const myApprovalEntry = approval_details.find(
     (a) => a.email?.toLowerCase() === loggedInEmail.toLowerCase(),
   );
-  const isApprover = !!myApprovalEntry;
-  // Has the logged-in approver already decided?
+  const isApprover    = !!myApprovalEntry;
   const alreadyDecided = isApprover && myApprovalEntry.status !== "pending";
 
-  // ── Derived values ───────────────────────────────────────────────────────
   const displayStatus = version?.display_status ?? version?.status ?? "—";
-  const rawStatus = version?.status ?? "";
-  const approvalMode = version?.approval_mode ?? null; // "independent" | "dependent"
-  const downloadUrl = version?.download_url ?? null;
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  const rawStatus     = version?.status ?? "";
+  const approvalMode  = version?.approval_mode ?? null;
+  const downloadUrl   = version?.download_url  ?? null;
 
   async function handleDownload() {
     if (!downloadUrl) return;
     try {
-      const res = await fetch(downloadUrl);
+      const res  = await fetch(downloadUrl);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
       a.download = version?.file_name ?? file?.file_name ?? "file";
       a.click();
       URL.revokeObjectURL(url);
@@ -146,33 +130,27 @@ export default function FileDetail() {
     }
     setSubmitting(dec);
     try {
-      await ApprovalDetailService.decide({
-        version_id: id,
-        decision: dec, // "approve" | "reject"
-        comment: comment.trim(),
-      });
+      await submitDecision({ version_id: id, decision: dec, comment: comment.trim() }).unwrap();
       setDecision(dec);
       toast.success(
         dec === "approve"
           ? "Approved successfully."
           : "Rejected — file returned to contributor.",
       );
-      // Refresh detail so the approver list statuses update
-      dispatch(fetchApprovalDetail(id));
+      // invalidatesTags on the mutation auto-refetches the detail
     } catch (err) {
-      toast.error(err.message || "Failed to submit decision.");
+      toast.error(err?.data ?? "Failed to submit decision.");
     } finally {
       setSubmitting(null);
     }
   }
+
   const version_columns = [
     {
       accessorKey: "input_version",
       header: "Version",
       cell: ({ row }) => (
-        <span className="font-mono font-semibold text-xs">
-          {row.getValue("input_version")}
-        </span>
+        <span className="font-mono font-semibold text-xs">{row.getValue("input_version")}</span>
       ),
     },
     {
@@ -187,11 +165,7 @@ export default function FileDetail() {
     {
       accessorKey: "submitted_by",
       header: "Submitted By",
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">
-          {row.getValue("submitted_by")}
-        </span>
-      ),
+      cell: ({ row }) => <span className="text-muted-foreground">{row.getValue("submitted_by")}</span>,
     },
     {
       accessorKey: "date",
@@ -200,15 +174,7 @@ export default function FileDetail() {
         const d = row.getValue("date");
         return (
           <span className="text-muted-foreground whitespace-nowrap">
-            {d
-              ? new Date(d).toLocaleString(undefined, {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "—"}
+            {d ? new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
           </span>
         );
       },
@@ -218,17 +184,13 @@ export default function FileDetail() {
       header: "Status",
       cell: ({ row }) => {
         const s = row.getValue("status");
-        return (
-          <Badge status={s} className="text-xs capitalize">
-            {s}
-          </Badge>
-        );
+        return <Badge status={s} className="text-xs capitalize">{s}</Badge>;
       },
     },
   ];
+
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
-      {/* Header */}
       <div>
         <Button variant="ghost" className="py-4" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -240,9 +202,7 @@ export default function FileDetail() {
         </p>
       </div>
 
-      {/* Main card */}
       <div className="rounded-lg border bg-card p-6">
-        {/* Card header */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -255,7 +215,6 @@ export default function FileDetail() {
               {file?.governed_app} · {file?.cloud} · {file?.category} · Submitted by {version?.submitted_by ?? "—"}
             </div>
           </div>
-          {/* "Pending Your Approval" when the logged-in user still needs to decide */}
           {isApprover && !alreadyDecided && !decision ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400 px-3 py-1 text-xs font-medium text-amber-600 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
@@ -269,19 +228,18 @@ export default function FileDetail() {
         </div>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* ── Left: file properties + description + download ────────── */}
           <div>
             <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-3">
               FILE PROPERTIES
             </p>
             <div className="mb-4">
-              <DetailRow label="File name"       value={file?.file_name} />
-              <DetailRow label="File Category"   value={file?.category} />
-              <DetailRow label="File Type"       value={version?.change_type} />
-              <DetailRow label="Application"     value={file?.governed_app} />
-              <DetailRow label="Cloud"           value={file?.cloud} />
-              <DetailRow label="Approve type"    value={approvalMode} />
-              <DetailRow label="Current version" value={file?.current_input_version} />
+              <DetailRow label="File name"        value={file?.file_name} />
+              <DetailRow label="File Category"    value={file?.category} />
+              <DetailRow label="File Type"        value={version?.change_type} />
+              <DetailRow label="Application"      value={file?.governed_app} />
+              <DetailRow label="Cloud"            value={file?.cloud} />
+              <DetailRow label="Approve type"     value={approvalMode} />
+              <DetailRow label="Current version"  value={file?.current_input_version} />
               <DetailRow label="Previous version" value={version?.previous_version} />
               <DetailRow
                 label="Submitted by"
@@ -309,7 +267,6 @@ export default function FileDetail() {
             </p>
           </div>
 
-          {/* ── Right: decision panel → approvers ─────────────────────── */}
           <div>
             {isApprover && (
               <>
@@ -317,7 +274,6 @@ export default function FileDetail() {
                   {alreadyDecided || decision ? "YOUR DECISION STATUS" : "YOUR DECISION"}
                 </p>
 
-                {/* Decided in this session — show recorded comment */}
                 {decision && (
                   <div className={`rounded-lg border px-4 py-3 mb-4 ${decision === "approve" ? "border-green-200 bg-green-50 dark:bg-green-950/20" : "border-destructive/30 bg-destructive/5"}`}>
                     <p className={`text-sm font-semibold flex items-center gap-1.5 mb-2 ${decision === "approve" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
@@ -331,7 +287,6 @@ export default function FileDetail() {
                   </div>
                 )}
 
-                {/* Already decided in a previous session */}
                 {!decision && alreadyDecided && (
                   <div className={`rounded-lg border px-4 py-3 mb-4 ${myApprovalEntry.status === "approved" ? "border-green-200 bg-green-50 dark:bg-green-950/20" : "border-destructive/30 bg-destructive/5"}`}>
                     <p className={`text-sm font-semibold flex items-center gap-1.5 mb-1 ${myApprovalEntry.status === "approved" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
@@ -354,7 +309,6 @@ export default function FileDetail() {
                   </div>
                 )}
 
-                {/* Active decision form */}
                 {!decision && !alreadyDecided && (
                   <>
                     <Textarea
@@ -401,9 +355,8 @@ export default function FileDetail() {
               </>
             )}
 
-            {/* Approvers list */}
             <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-3">
-              APPROVERS {approval_details.length > 0 && `DETAILS`}
+              APPROVERS {approval_details.length > 0 && "DETAILS"}
             </p>
             <div className="flex flex-col gap-3">
               {approval_details.length === 0 && (
@@ -443,21 +396,15 @@ export default function FileDetail() {
         </div>
       </div>
 
-      {/* ── Version History ──────────────────────────────────────────────── */}
       {version_history.length > 0 && (
         <div className="rounded-lg border bg-card p-6">
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-4">
             VERSION HISTORY
           </p>
-          <DataTable
-            columns={version_columns}
-            data={version_history}
-            emptyMessage="No version history."
-          />
+          <DataTable columns={version_columns} data={version_history} emptyMessage="No version history." />
         </div>
       )}
 
-      {/* ── Activity Log ─────────────────────────────────────────────────── */}
       {activity_log.length > 0 && (
         <div className="rounded-lg border bg-card p-6">
           <p className="text-[11px] font-semibold tracking-wider text-muted-foreground mb-4">
@@ -468,13 +415,7 @@ export default function FileDetail() {
               <div key={entry.audit_id} className="flex gap-6 py-2.5 text-sm">
                 <span className="w-40 shrink-0 text-muted-foreground whitespace-nowrap">
                   {entry.timestamp
-                    ? new Date(entry.timestamp).toLocaleString(undefined, {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                    ? new Date(entry.timestamp).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
                     : "—"}
                 </span>
                 <span className="text-foreground">{entry.message}</span>
