@@ -1,10 +1,22 @@
 import axios from "axios"
 import Cookies from "js-cookie"
+import { isEndpointEnabledFromState } from "@/store/slice/permissions.slice"
+
+// Injected after the Redux store is created to avoid a circular import.
+// Call injectStore(store) once in main.jsx (or store.js bootstrap).
+let _store = null
+export function injectStore(store) {
+  _store = store
+}
 
 class ApiClient {
   #client
+  #moduleKey // truthy only on clients that participate in permission checks
 
   constructor(baseURL, defaultHeaders = {}) {
+    // Clients that carry an "Appname" header are IFG-scoped and get endpoint blocking.
+    this.#moduleKey = defaultHeaders.Appname ?? null
+
     this.#client = axios.create({
       baseURL,
       paramsSerializer: (params) => {
@@ -30,10 +42,45 @@ class ApiClient {
       return config
     })
 
+    // Endpoint-permission guard — runs only for IFG-scoped clients
+    if (this.#moduleKey) {
+      const moduleKey = this.#moduleKey
+      this.#client.interceptors.request.use((config) => {
+        if (!_store) return config
+
+        // Only check endpoints that belong to the IFG feature tree (ifgapi/* paths).
+        // Auth and infrastructure paths (/login, /users/list, etc.) are never
+        // in the permissions tree and must always pass through.
+        const normalizedUrl = config.url?.replace(/^\/+/, "") ?? ""
+        if (!normalizedUrl.startsWith("ifgapi/")) return config
+
+        // Skip RBAC when permissions haven't been loaded yet (pre-login state).
+        const featuresData = _store.getState().permissions?.featuresData ?? {}
+        if (!featuresData[moduleKey]) return config
+
+        const allowed = isEndpointEnabledFromState(_store.getState(), moduleKey, config.url)
+        if (!allowed) {
+          if (import.meta.env.DEV) {
+            console.warn(
+              `[RBAC] Blocked request — endpoint not permitted: ${config.url} (module: ${moduleKey})`
+            )
+          }
+          return Promise.reject({
+            status: 403,
+            message: "Endpoint not permitted",
+            blocked: true,
+          })
+        }
+        return config
+      })
+    }
+
     // Normalize error shape so callers always get err.message
     this.#client.interceptors.response.use(
       (res) => res,
       (err) => {
+        // Pass through our own structured blocked-request rejection unchanged
+        if (err?.blocked) return Promise.reject(err)
         const message =
           err.response?.data?.Message ||
           err.response?.data?.message ||

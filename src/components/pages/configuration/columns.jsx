@@ -5,7 +5,8 @@ import CloudCell from "./CloudCell";
 import ApproverCell from "./ApproverCell";
 import { Button } from "@/components/ui/button";
 
-export function makeColumns(onEdit, onDelete, onToggle, togglingId) {
+export function makeColumns(onEdit, onDelete, onToggle, togglingId, permissions = {}) {
+  const { canUpdate = true, canDelete = true } = permissions
   return [
     {
       id: "index",
@@ -58,7 +59,7 @@ export function makeColumns(onEdit, onDelete, onToggle, togglingId) {
         <Switch
         className="cursor-pointer"
           checked={!!row.getValue("is_active")}
-          disabled={togglingId === row.original.category_id}
+          disabled={!canUpdate || togglingId === row.original.category_id}
           onCheckedChange={(checked) =>
             onToggle(row.original.category_id, checked)
           }
@@ -70,22 +71,26 @@ export function makeColumns(onEdit, onDelete, onToggle, togglingId) {
       header: "ACTIONS",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Button
-          variant="ghost"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => onEdit(row.original)}
-            title="Edit category"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-          variant="ghost"
-            className="text-muted-foreground hover:text-destructive transition-colors"
-            onClick={() => onDelete(row.original)}
-            title="Delete category"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {canUpdate && (
+            <Button
+            variant="ghost"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => onEdit(row.original)}
+              title="Edit category"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+            variant="ghost"
+              className="text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => onDelete(row.original)}
+              title="Delete category"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       ),
     },

@@ -4,6 +4,7 @@ export const FILE_STATUS = Object.freeze({
   PARTIALLY_APPROVED: "partially_approved",
   APPROVED:           "approved", 
   REJECTED:           "rejected", 
+  NOT_REQUIRED:       "not_required"
 })
 
 export const FILE_STATUS_COLORS = Object.freeze({
@@ -12,6 +13,10 @@ export const FILE_STATUS_COLORS = Object.freeze({
     text: "#92400E",
   },
   [FILE_STATUS.REVIEW]: {
+    bg:   "#DBEAFE",
+    text: "#1E40AF",
+  },
+  [FILE_STATUS.NOT_REQUIRED]: {
     bg:   "#DBEAFE",
     text: "#1E40AF",
   },

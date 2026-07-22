@@ -15,9 +15,9 @@ const Versioning     = lazy(() => import("@/components/pages/Versioning"))
 const Release        = lazy(() => import("@/components/pages/Release"))
 const Configuration  = lazy(() => import("@/components/pages/Configuration"))
 
-function wrap(Component) {
+function wrap(Component, featureName) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute featureName={featureName}>
       <Suspense fallback={<PageSkeleton />}>
         <Component />
       </Suspense>
@@ -27,13 +27,13 @@ function wrap(Component) {
 
 export const routeConfig = [
   { path: "/",                    element: <Navigate to={ROUTES.FILE_CATALOG} replace /> },
-  { path: ROUTES.FILE_CATALOG,    element: wrap(FileCatalog) },
-  { path: "/file/:id",            element: wrap(FileDetail) },
-  { path: ROUTES.UPLOAD_VALIDATE, element: wrap(Uploadvalidate) },
-  { path: ROUTES.APPROVALS,       element: wrap(Approvals) },
-  { path: ROUTES.VERSIONING,      element: wrap(Versioning) },
-  { path: ROUTES.RELEASE,         element: wrap(Release) },
-  { path: ROUTES.CONFIGURATION,   element: wrap(Configuration) },
+  { path: ROUTES.FILE_CATALOG,    element: wrap(FileCatalog,    "file_management") },
+  { path: "/file/:id",            element: wrap(FileDetail,     "file_management") },
+  { path: ROUTES.UPLOAD_VALIDATE, element: wrap(Uploadvalidate, "file_management") },
+  { path: ROUTES.APPROVALS,       element: wrap(Approvals,      "versioning") },
+  { path: ROUTES.VERSIONING,      element: wrap(Versioning,     "versioning") },
+  { path: ROUTES.RELEASE,         element: wrap(Release,        "release") },
+  { path: ROUTES.CONFIGURATION,   element: wrap(Configuration,  "configuration") },
   { path: ROUTES.NOT_AUTHORIZED,  element: <NotAuthorizedPage /> },
   { path: ROUTES.LOGIN,           element: <InternalLoginPage /> },
   { path: "*",                    element: <ProtectedRoute><NotFoundPage /></ProtectedRoute> },

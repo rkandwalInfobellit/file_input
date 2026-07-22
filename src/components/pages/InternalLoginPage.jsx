@@ -3,12 +3,15 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
 import { Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
-import { loginWithCredentials, fetchUserInfo, setAuthCookies } from "@/lib/auth"
+import { loginWithCredentials, fetchUserInfo, setAuthCookies, getFeatureData } from "@/lib/auth"
+import { setPermissions } from "@/store/slice/permissions.slice"
 import { ROUTES } from "@/lib/routes"
 import headerLogo from "@/assets/amd-header-logo.svg"
 import { Button } from "../ui/button";
+import Cookies from "js-cookie"
 
 const schema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -17,16 +20,17 @@ const schema = z.object({
 
 export default function InternalLoginPage() {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
-    mode: "onChange",
+    mode: "onSubmit",
   })
 
   async function onSubmit({ email, password }) {
@@ -35,6 +39,10 @@ export default function InternalLoginPage() {
       const { jwtToken } = await loginWithCredentials(email, password)
       const userInfo = await fetchUserInfo(jwtToken)
       setAuthCookies(jwtToken, userInfo)
+      // Populate Redux immediately so ProtectedRoute feature checks pass
+      // before the navigation renders the target route.
+      const moduleKey = Cookies.get("application") || "IFG"
+      dispatch(setPermissions({ [moduleKey]: { features: getFeatureData() } }))
       toast.success("Logged in successfully")
       setTimeout(() => navigate(ROUTES.FILE_CATALOG), 800)
     } catch (err) {
@@ -104,7 +112,7 @@ export default function InternalLoginPage() {
           {/* Submit */} 
             <Button
               type="submit"
-              disabled={!isValid || isLoading}
+              disabled={isLoading}
               size="lg"
               className="scale-125 ml-2"
             >

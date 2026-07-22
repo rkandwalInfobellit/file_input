@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Loader2 } from "lucide-react";
@@ -10,25 +10,20 @@ import { DataTable } from "@/components/DataTable/DataTable";
 import { fileCatalogColumns } from "@/components/DataTable/fileCatalog.columns";
 
 import {
-  fetchFiles,
-  fetchTabCounts,
   setActiveTab,
   setSearch,
   setAppFilter,
   setCloudFilter,
   setCategoryFilter,
   setStatusFilter,
-  selectTabCounts,
 } from "@/store/slice/fileCatalog.slice";
-import { fetchClouds, fetchApplications } from "@/store/slice/app.slice";
-import CategoryService from "@/services/category.service";
-import {
-  selectFileCatalogState,
-  selectFiles,
-  selectFileCatalogMeta,
-} from "@/store/selectors/fileCatalog.selectors";
 import { selectFilterOptions } from "@/store/selectors/filterOptions.selectors";
 import { ROUTES } from "@/lib/routes";
+
+import { useGetFilesQuery } from "@/store/api/endpoints/catalog.endpoints";
+import { useGetCloudsQuery, useGetApplicationsQuery } from "@/store/api/endpoints/app.endpoints";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import CategoryService from "@/services/category.service";
 
 const TAB_CONFIG = [
   { value: "all",      label: "All" },
@@ -42,113 +37,95 @@ export default function FileCatalogPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { fetchStatus, error, activeTab, search, filters } = useSelector(
-    selectFileCatalogState,
-  );
-  const files = useSelector(selectFiles);
-  const { currentPage } = useSelector(selectFileCatalogMeta);
-  const { governed_apps, clouds, statuses } =
-    useSelector(selectFilterOptions);
-  const tabCounts = useSelector(selectTabCounts);
+  // RTK Query — fetch clouds + apps so selector can read from cache
+  useGetCloudsQuery();
+  useGetApplicationsQuery();
 
-  const searchTimer = useRef(null); 
-  // Always-fresh ref — handlers read from here, never from stale closures
-  const stateRef = useRef({});
-  stateRef.current = { activeTab, search, filters, currentPage };
+  // Local UI state (replaces the Redux filter state that was previously read
+  // via selectors — we keep the Redux actions for backward compat with other
+  // consumers that might still read fileCatalog slice, but primary source of
+  // truth for the query is local state here)
+  const { governed_apps, clouds, statuses } = useSelector(selectFilterOptions);
 
-  const load = useCallback(
-    (overrides = {}) => {
-      const s = stateRef.current;
-      dispatch(
-        fetchFiles({
-          tab: s.activeTab,
-          page: s.currentPage,
-          limit: PAGE_SIZE,
-          search: s.search,
-          governed_app: s.filters.governed_app,
-          cloud: s.filters.cloud,
-          category: s.filters.category,
-          status: s.filters.status,
-          ...overrides,
-        }),
-      );
-    },
-    [dispatch],
-  );
+  const [activeTab,   setActiveTabLocal]   = useState("all");
+  const [searchRaw,   setSearchRaw]        = useState("");
+  const [appFilter,   setAppFilterLocal]   = useState([]);
+  const [cloudFilter, setCloudFilterLocal] = useState([]);
+  const [catFilter,   setCatFilterLocal]   = useState([]);
+  const [statusFilter,setStatusFilterLocal]= useState([]);
+  const [pageIndex,   setPageIndex]        = useState(0);
+  const [pageSize,    setPageSize]         = useState(PAGE_SIZE);
 
-  // Runs once on mount — explicit params so nothing depends on stateRef timing
-  useEffect(() => {
-    dispatch(fetchClouds());
-    dispatch(fetchApplications());
-    dispatch(fetchTabCounts());
-    dispatch(
-      fetchFiles({
-        tab: "all",
-        page: 1,
-        limit: PAGE_SIZE,
-        search: "",
-        governed_app: [],
-        cloud: [],
-        category: [],
-        status: [],
-      }),
-    );
-  }, [dispatch]);
+  const debouncedSearch = useDebouncedValue(searchRaw, 350);
 
-  // ── Tab ───────────────────────────────────────────────────────────────────
+  // RTK Query — main file list. Refetches automatically whenever any arg changes.
+  const { data, isFetching, isError, error } = useGetFilesQuery({
+    tab:          activeTab,
+    page:         pageIndex + 1,
+    limit:        pageSize,
+    search:       debouncedSearch,
+    governed_app: appFilter,
+    cloud:        cloudFilter,
+    category:     catFilter,
+    status:       statusFilter,
+  });
+
+  // Per-tab count queries — each fires independently and caches separately
+  const { data: allData }    = useGetFilesQuery({ tab: "all",      page: 1, limit: 1 });
+  const { data: myData }     = useGetFilesQuery({ tab: "my_files", page: 1, limit: 1 });
+  const { data: reqData }    = useGetFilesQuery({ tab: "requests", page: 1, limit: 1 });
+  const tabCounts = {
+    all:      allData?.total_items  ?? null,
+    my_files: myData?.total_items   ?? null,
+    requests: reqData?.total_items  ?? null,
+  };
+
+  const files       = data?.items       ?? [];
+  const currentPage = data?.current_page ?? 1;
+  const totalPages  = data?.total_pages  ?? 0;
+
+  // Synchronise filter changes into Redux so other slices/selectors stay in sync
   function handleTabChange(tab) {
+    setActiveTabLocal(tab);
     dispatch(setActiveTab(tab));
-    load({ tab, page: 1 });
+    setPageIndex(0);
   }
 
-  // ── Search — debounced, wired to Input ───────────────────────────────────
   function handleSearch(val) {
+    setSearchRaw(val);
     dispatch(setSearch(val));
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => load({ search: val, page: 1 }), 350);
+    setPageIndex(0);
   }
 
-  // ── Filters — dispatch then call API once ─────────────────────────────────
-  function handleFilter(setter, key, values) {
-    dispatch(setter(values));
-    load({ [key]: values, page: 1 });
-  }
-
-  // ── Pagination ────────────────────────────────────────────────────────────
-  function handlePageChange(pageIndex) {
-    load({ page: pageIndex + 1 });
-  }
-
-  function handlePageSizeChange(size) {
-    load({ page: 1, limit: size });
+  function handleFilter(localSetter, reduxSetter, values) {
+    localSetter(values);
+    dispatch(reduxSetter(values));
+    setPageIndex(0);
   }
 
   const searchCategories = useCallback(async (query, page) => {
-    const result = await CategoryService.list({ page, limit: 20, search: query, is_active: true })
-    return { items: result.items, total_pages: result.total_pages }
-  }, [])
+    const result = await CategoryService.list({ page, limit: 20, search: query, is_active: true });
+    return { items: result.items, total_pages: result.total_pages };
+  }, []);
 
   const filterDefs = [
     {
-      label: "App",
+      label:   "App",
       options: governed_apps,
-      value: filters.governed_app,
-      setter: setAppFilter,
-      key: "governed_app",
+      value:   appFilter,
+      onChangeFn: (vals) => handleFilter(setAppFilterLocal, setAppFilter, vals),
     },
     {
-      label: "Cloud",
+      label:   "Cloud",
       options: clouds,
-      value: filters.cloud,
-      setter: setCloudFilter,
-      key: "cloud",
+      value:   cloudFilter,
+      onChangeFn: (vals) => handleFilter(setCloudFilterLocal, setCloudFilter, vals),
     },
     {
-      label: "Status",
-      options: statuses.map(k=>k.toLowerCase()),
-      value: filters.status,
-      setter: setStatusFilter,
-      key: "status",
+      label:   "Status",
+      options: statuses.map((k) => k.toLowerCase()),
+      value:   statusFilter,
+      onChangeFn: (vals) => handleFilter(setStatusFilterLocal, setStatusFilter, vals),
     },
   ];
 
@@ -185,29 +162,27 @@ export default function FileCatalogPage() {
         ))}
       </div>
 
-      <div className="border rounded-md"> 
+      <div className="border rounded-md">
         <div className="flex border-b rounded-b-none items-center gap-2 rounded-md flex-nowrap p-2 bg-card relative">
           <div className="relative mr-auto w-full">
-            {fetchStatus === "loading" && files.length > 0
+            {isFetching && files.length > 0
               ? <Loader2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground animate-spin" />
               : <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             }
             <Input
               className="h-8 pl-8 w-full"
               placeholder="Search files..."
-              value={search}
+              value={searchRaw}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
 
-          {filterDefs.map(({ label, options, value, setter, key }) => (
-            <div key={key} className="w-36">
+          {filterDefs.map(({ label, options, value, onChangeFn }) => (
+            <div key={label} className="w-36">
               <Combobox
                 options={options.map((v) => ({ value: v, label: v }))}
                 value={value.map((v) => ({ value: v, label: v }))}
-                onChange={(selected) =>
-                  handleFilter(setter, key, selected.map((o) => o.value))
-                }
+                onChange={(selected) => onChangeFn(selected.map((o) => o.value))}
                 getValue={(o) => o.value}
                 getLabel={(o) => o.label}
                 placeholder={label}
@@ -222,10 +197,11 @@ export default function FileCatalogPage() {
           <div className="w-36">
             <Combobox
               onSearch={searchCategories}
-              value={filters.category.map((id) => ({ category_id: id, display_name: id }))}
-              onChange={(selected) =>
-                handleFilter(setCategoryFilter, "category", selected.map((o) => o.category_id))
-              }
+              value={catFilter.map((id) => ({ category_id: id, display_name: id }))}
+              onChange={(selected) => {
+                const vals = selected.map((o) => o.category_id);
+                handleFilter(setCatFilterLocal, setCategoryFilter, vals);
+              }}
               getValue={(o) => o.category_id}
               getLabel={(o) => o.display_name}
               placeholder="Category"
@@ -239,16 +215,14 @@ export default function FileCatalogPage() {
           columns={fileCatalogColumns}
           className="border-none"
           data={files}
-          loading={fetchStatus === "loading" && files.length === 0}
-          error={
-            fetchStatus === "failed" ? (error ?? "Failed to load files.") : null
-          }
+          loading={isFetching && files.length === 0}
+          error={isError ? (error?.data ?? "Failed to load files.") : null}
           emptyMessage="No files match your search or filters."
           pagination={{
-            pageIndex: currentPage - 1,
-            pageSize: PAGE_SIZE,
-            setPageIndex: handlePageChange,
-            setPageSize: handlePageSizeChange,
+            pageIndex,
+            pageSize,
+            setPageIndex: (idx) => setPageIndex(idx),
+            setPageSize:  (size) => { setPageSize(size); setPageIndex(0); },
           }}
           meta={{ onView: (id) => navigate(ROUTES.FILE_DETAIL(id)) }}
         />
