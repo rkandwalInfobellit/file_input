@@ -129,7 +129,7 @@ export default function RuleSheet({ open, onClose, initial }) {
   const { data: appsData }    = useGetApplicationsQuery(undefined, { skip: !open })
 
   const cloudOptions = (cloudsData ?? []).map((c) => ({ value: c.cloud_id,  label: c.display_name }))
-  const appOptions   = (appsData   ?? []).map((a) => ({ value: a.name,      label: a.display_name }))
+  const appOptions   = (appsData   ?? []).map((a) => ({ value: a.name,      label: a.name }))
 
   const [createCategory, { isLoading: creating }] = useCreateCategoryMutation()
   const [updateCategory, { isLoading: updating }] = useUpdateCategoryMutation()
