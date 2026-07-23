@@ -29,7 +29,7 @@ export default function App() {
   return (
     <main className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
       <Header />
-      <SidebarProvider className="flex-1 min-h-0">
+      <SidebarProvider defaultOpen className="flex-1 min-h-0">
         <div className="flex flex-1 min-h-0">
           <AppSidebar />
           <div className="flex-1 min-h-0 overflow-auto">
