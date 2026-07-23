@@ -46,9 +46,7 @@ export default function Configuration() {
   const canCreate = useEndpointPermission("ifgapi/categories/create");
   const canUpdate = useEndpointPermission("ifgapi/categories/update");
   const canDelete = useEndpointPermission("ifgapi/categories/delete");
-
-  const activeCount = categories.filter((c) => c.is_active).length;
-
+ 
   function handleEdit(category) {
     setEditRule(category);
     setSheetOpen(true);
@@ -95,12 +93,9 @@ export default function Configuration() {
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
+            
               <div className="font-semibold text-sm">Role-Based Approver Rules</div>
-              <div className="text-xs text-muted-foreground">
-                {activeCount} active · {totalItems} total
-              </div>
-            </div>
+                
           </div>
 
           <div className="flex items-center gap-2">
@@ -134,6 +129,8 @@ export default function Configuration() {
             pageSize,
             setPageIndex: (idx) => setPageIndex(idx),
             setPageSize:  (size) => { setPageSize(size); setPageIndex(0); },
+            totalItems,
+            pageCount: Math.ceil(totalItems / pageSize),
           }}
         />
       </div>

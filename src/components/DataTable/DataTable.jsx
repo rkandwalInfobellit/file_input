@@ -102,10 +102,19 @@ function FilterDropdown({ label, options, value, setValue, isMultiSelect }) {
 //     setPageSize: fn,
 //   }
 // ---------------------------------------------------------------------------
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  if (current <= 4) return [1, 2, 3, 4, 5, "...", total]
+  if (current >= total - 3) return [1, "...", total - 4, total - 3, total - 2, total - 1, total]
+  return [1, "...", current - 1, current, current + 1, "...", total]
+}
+
 function PaginationBar({ pagination, totalRows, pageCount }) {
   const { pageIndex, pageSize, setPageIndex, setPageSize } = pagination
-  const from = totalRows === 0 ? 0 : pageIndex * pageSize + 1
-  const to   = Math.min((pageIndex + 1) * pageSize, totalRows)
+  const from  = totalRows === 0 ? 0 : pageIndex * pageSize + 1
+  const to    = Math.min((pageIndex + 1) * pageSize, totalRows)
+  const total = Math.max(pageCount, 1)
+  const pages = getPageNumbers(pageIndex + 1, total)
 
   return (
     <div className="flex items-center justify-between border-t px-4 py-3">
@@ -141,14 +150,28 @@ function PaginationBar({ pagination, totalRows, pageCount }) {
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </Button>
-          <span className="min-w-16 text-center text-xs text-muted-foreground">
-            {pageIndex + 1} / {Math.max(pageCount, 1)}
-          </span>
+
+          {pages.map((p, i) =>
+            p === "..." ? (
+              <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground select-none">…</span>
+            ) : (
+              <Button
+                key={p}
+                variant={p === pageIndex + 1 ? "default" : "outline"}
+                size="icon"
+                className="h-7 w-7 text-xs"
+                onClick={() => setPageIndex(p - 1)}
+              >
+                {p}
+              </Button>
+            )
+          )}
+
           <Button
             variant="outline"
             size="icon"
             className="h-7 w-7"
-            disabled={pageIndex >= pageCount - 1}
+            disabled={pageIndex >= total - 1}
             onClick={() => setPageIndex(pageIndex + 1)}
           >
             <ChevronRight className="h-3.5 w-3.5" />
@@ -173,7 +196,7 @@ export function DataTable({ columns, data, filters, loading, error, emptyMessage
     getCoreRowModel:       getCoreRowModel(),
     getFilteredRowModel:   getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    ...(isManual && { rowCount: (pagination.pageCount ?? 1) * (pagination.pageSize ?? 10) }),
+    ...(isManual && { rowCount: pagination.totalItems ?? (pagination.pageCount ?? 1) * (pagination.pageSize ?? 10) }),
     state: pagination ? {
       pagination: { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize },
     } : undefined,
