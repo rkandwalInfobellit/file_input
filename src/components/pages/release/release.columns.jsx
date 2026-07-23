@@ -27,10 +27,10 @@ export function makeDraftColumns({ selected, versions, rollbackReasons, toggleFi
       ),
     },
     {
-      accessorKey: "name",
+      accessorKey: "categoryDisplayName",
       header: "FILE",
       cell: ({ row }) => (
-        <span className="font-semibold text-sm">{row.getValue("name")}</span>
+        <span className="font-semibold text-sm">{row.getValue("categoryDisplayName")}</span>
       ),
     },
     {

@@ -1,28 +1,28 @@
-import React, { useMemo } from "react"
-import { Tag, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { FieldLabel, Field } from "@/components/ui/field"
+import React, { useMemo } from "react";
+import { Tag, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FieldLabel, Field } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetFooter,
-} from "@/components/ui/sheet"
-import { DataTable } from "@/components/DataTable/DataTable"
-import { SingleRollbackDialog } from "./RollbackDialog"
-import { RELEASE_TYPE_OPTIONS } from "./releaseConstants"
-import { makeDraftColumns } from "./release.columns"
-import { useReleaseSheet } from "./useReleaseSheet"
+} from "@/components/ui/sheet";
+import { DataTable } from "@/components/DataTable/DataTable";
+import { SingleRollbackDialog } from "./RollbackDialog";
+import { RELEASE_TYPE_OPTIONS } from "./releaseConstants";
+import { makeDraftColumns } from "./release.columns";
+import { useReleaseSheet } from "./useReleaseSheet";
 
 // ---------------------------------------------------------------------------
 // Skeleton shown while draft files are loading
@@ -41,7 +41,7 @@ function TableSkeleton({ rows = 6, cols = 6 }) {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -50,37 +50,64 @@ function TableSkeleton({ rows = 6, cols = 6 }) {
 // ---------------------------------------------------------------------------
 export function CreateReleaseSheet({ open, onClose, currentVersion }) {
   const {
-    releaseType, setReleaseType,
-    newVersion, releaseName,
-    mappedFiles, selectedFiles,
-    selected, toggleFile,
-    versions, rollbackReasons,
-    pendingRollback, rollbackDialogFile,
-    handleRollbackConfirm, handleRollbackCancel,
-    missingReason, canCreate, submitting,
-    handleCreate, onVersionChange,
-    draftPage, draftPageCount, draftTotal, draftLimit, draftFetchStatus,
+    releaseType,
+    setReleaseType,
+    newVersion,
+    releaseName,
+    mappedFiles,
+    selectedFiles,
+    selected,
+    toggleFile,
+    versions,
+    rollbackReasons,
+    pendingRollback,
+    rollbackDialogFile,
+    handleRollbackConfirm,
+    handleRollbackCancel,
+    missingReason,
+    canCreate,
+    submitting,
+    handleCreate,
+    onVersionChange,
+    draftPage,
+    draftPageCount,
+    draftTotal,
+    draftLimit,
+    draftFetchStatus,
     setDraftPage,
-  } = useReleaseSheet({ open, onClose, currentVersion })
+  } = useReleaseSheet({ open, onClose, currentVersion });
 
   // Columns are stable as long as the state references don't change
   const columns = useMemo(
-    () => makeDraftColumns({ selected, versions, rollbackReasons, toggleFile, onVersionChange }),
-    [selected, versions, rollbackReasons, toggleFile, onVersionChange]
-  )
+    () =>
+      makeDraftColumns({
+        selected,
+        versions,
+        rollbackReasons,
+        toggleFile,
+        onVersionChange,
+      }),
+    [selected, versions, rollbackReasons, toggleFile, onVersionChange],
+  );
 
-  const loading = draftFetchStatus === "loading" || draftFetchStatus === "idle"
-
+  const loading = draftFetchStatus === "loading" || draftFetchStatus === "idle";
+  console.log({ mappedFiles });
   return (
     <>
-      <Sheet open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <Sheet
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) onClose();
+        }}
+      >
         <SheetContent side="right" className="flex flex-col sm:max-w-4xl!">
-
           {/* Header */}
           <SheetHeader className="border-b pb-4 px-6">
             <div className="flex items-center gap-2">
               <Tag className="h-4 w-4 text-muted-foreground" />
-              <SheetTitle className="text-base font-bold">Create New Release</SheetTitle>
+              <SheetTitle className="text-base font-bold">
+                Create New Release
+              </SheetTitle>
             </div>
 
             <Field className="mt-3 mb-1">
@@ -90,19 +117,26 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
               <Select value={releaseType} onValueChange={setReleaseType}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select release type">
-                    {RELEASE_TYPE_OPTIONS.find((o) => o.value === releaseType)?.label}
+                    {
+                      RELEASE_TYPE_OPTIONS.find((o) => o.value === releaseType)
+                        ?.label
+                    }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {RELEASE_TYPE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
 
             <div className="flex items-center justify-between rounded-md border bg-muted px-2 py-2">
-              <span className="text-sm text-muted-foreground">Version update</span>
+              <span className="text-sm text-muted-foreground">
+                Version update
+              </span>
               <span className="text-sm font-semibold flex items-center gap-2">
                 <span className="font-mono">{currentVersion}</span>
                 <span className="text-muted-foreground">→</span>
@@ -119,7 +153,8 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
           {/* Subheader */}
           <div className="px-6 pt-3 pb-1 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Select files and versions to include. Picking a previous version opens a rollback reason dialog.
+              Select files and versions to include. Picking a previous version
+              opens a rollback reason dialog.
             </p>
             {selectedFiles.length > 0 && (
               <Badge variant="outline" className="text-xs shrink-0 ml-2">
@@ -130,7 +165,8 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
 
           {missingReason && (
             <p className="px-6 text-xs text-amber-600">
-              Some rollback files are missing a reason. Select the version again to set it.
+              Some rollback files are missing a reason. Select the version again
+              to set it.
             </p>
           )}
 
@@ -144,14 +180,18 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
                 data={mappedFiles}
                 emptyMessage="No approved files available for release."
                 loading={false}
-                error={draftFetchStatus === "failed" ? "Failed to load files. Please try again." : null}
+                error={
+                  draftFetchStatus === "failed"
+                    ? "Failed to load files. Please try again."
+                    : null
+                }
                 pagination={{
-                  pageIndex:    draftPage - 1,
-                  pageSize:     draftLimit,
-                  pageCount:    draftPageCount,
-                  totalItems:   draftTotal,
+                  pageIndex: draftPage - 1,
+                  pageSize: draftLimit,
+                  pageCount: draftPageCount,
+                  totalItems: draftTotal,
                   setPageIndex: setDraftPage,
-                  setPageSize:  () => {},
+                  setPageSize: () => {},
                 }}
               />
             )}
@@ -159,10 +199,22 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
 
           {/* Footer */}
           <SheetFooter className="border-t pt-4 px-6">
-            <Button className="w-full" disabled={!canCreate || submitting} onClick={handleCreate}>
-              {submitting
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating…</>
-                : <><Tag className="mr-2 h-4 w-4" />Create New Release</>}
+            <Button
+              className="w-full"
+              disabled={!canCreate || submitting}
+              onClick={handleCreate}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                <>
+                  <Tag className="mr-2 h-4 w-4" />
+                  Create New Release
+                </>
+              )}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -175,5 +227,5 @@ export function CreateReleaseSheet({ open, onClose, currentVersion }) {
         onCancel={handleRollbackCancel}
       />
     </>
-  )
+  );
 }

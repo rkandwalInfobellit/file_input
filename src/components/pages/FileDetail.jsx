@@ -264,7 +264,7 @@ export default function FileDetail() {
               <DetailRow label="Cloud"            value={file?.cloud} />
               <DetailRow label="Approve type"     value={approvalMode} />
               <DetailRow label="Current version"  value={file?.current_input_version} />
-              <DetailRow label="Purposed version" value={version?.proposed_input_version} />
+              <DetailRow label="Proposed version" value={version?.proposed_input_version} />
               <DetailRow
                 label="Submitted by"
                 value={
