@@ -92,7 +92,10 @@ function NotificationItem({ item, onRead }) {
 export default function Header() {
   const navigate = useNavigate()
 
-  const { data, isLoading } = useGetNotificationsQuery({ page: 1, limit: 20, is_read: false })
+  const { data, isLoading } = useGetNotificationsQuery(
+    { page: 1, limit: 20, is_read: false },
+    { pollingInterval: 3_600_000, skipPollingIfUnfocused: true }
+  )
   const items       = data?.items       ?? []
   const unreadCount = data?.unread_count ?? 0
 
