@@ -30,20 +30,20 @@ import "./api/endpoints/approvalDetail.endpoints"
 function loadPermissionsFromCookie() {
   try {
     const compressed = Cookies.get("IFG_features")
-    if (!compressed) return {}
+    if (!compressed) return undefined
     const json = LZString.decompressFromEncodedURIComponent(compressed)
     const features = json ? JSON.parse(json) : []
     const moduleKey = Cookies.get("application") || "IFG"
     return { featuresData: { [moduleKey]: { features } } }
   } catch {
-    return {}
+    return undefined
   }
 }
 
+const cookiePermissions = loadPermissionsFromCookie()
+
 export const store = configureStore({
-  preloadedState: {
-    permissions: loadPermissionsFromCookie(),
-  },
+  ...(cookiePermissions && { preloadedState: { permissions: cookiePermissions } }),
   reducer: {
     permissions:    permissionsReducer,
 
