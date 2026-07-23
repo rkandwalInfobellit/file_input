@@ -22,31 +22,31 @@ const PAGE_SIZE = 10;
 
 export default function Configuration() {
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize,  setPageSize]  = useState(PAGE_SIZE);
-  const [search,    setSearch]    = useState("");
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 350);
 
-  const [sheetOpen,   setSheetOpen]   = useState(false);
-  const [editRule,    setEditRule]     = useState(null);
-  const [deleteRule,  setDeleteRule]   = useState(null);
-  const [togglingId,  setTogglingId]   = useState(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editRule, setEditRule] = useState(null);
+  const [deleteRule, setDeleteRule] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   const { data, isLoading, isError } = useGetCategoriesQuery({
-    page:   pageIndex + 1,
-    limit:  pageSize,
+    page: pageIndex + 1,
+    limit: pageSize,
     search: debouncedSearch,
   });
 
-  const categories = data?.items       ?? [];
+  const categories = data?.items ?? [];
   const totalItems = data?.total_items ?? 0;
 
-  const [deleteCategory]       = useDeleteCategoryMutation();
+  const [deleteCategory] = useDeleteCategoryMutation();
   const [toggleCategoryActive] = useToggleCategoryActiveMutation();
 
   const canCreate = useEndpointPermission("ifgapi/categories/create");
   const canUpdate = useEndpointPermission("ifgapi/categories/update");
   const canDelete = useEndpointPermission("ifgapi/categories/delete");
- 
+
   function handleEdit(category) {
     setEditRule(category);
     setSheetOpen(true);
@@ -77,7 +77,13 @@ export default function Configuration() {
     setTogglingId(null);
   }
 
-  const columns = makeColumns(handleEdit, setDeleteRule, handleToggle, togglingId, { canUpdate, canDelete });
+  const columns = makeColumns(
+    handleEdit,
+    setDeleteRule,
+    handleToggle,
+    togglingId,
+    { canUpdate, canDelete },
+  );
 
   return (
     <section className="flex flex-col gap-4 px-4 py-1">
@@ -93,9 +99,10 @@ export default function Configuration() {
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
-            
-              <div className="font-semibold text-sm">Role-Based Approver Rules</div>
-                
+
+            <div className="font-semibold text-sm">
+              Role-Based Approver Rules
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -104,7 +111,10 @@ export default function Configuration() {
               <Input
                 placeholder="Search categories..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPageIndex(0); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPageIndex(0);
+                }}
                 className="w-48 pl-8"
               />
             </div>
@@ -128,7 +138,10 @@ export default function Configuration() {
             pageIndex,
             pageSize,
             setPageIndex: (idx) => setPageIndex(idx),
-            setPageSize:  (size) => { setPageSize(size); setPageIndex(0); },
+            setPageSize: (size) => {
+              setPageSize(size);
+              setPageIndex(0);
+            },
             totalItems,
             pageCount: Math.ceil(totalItems / pageSize),
           }}
@@ -137,7 +150,10 @@ export default function Configuration() {
 
       <RuleSheet
         open={sheetOpen}
-        onClose={() => { setSheetOpen(false); setEditRule(null); }}
+        onClose={() => {
+          setSheetOpen(false);
+          setEditRule(null);
+        }}
         initial={editRule}
       />
 
