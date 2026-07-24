@@ -19,6 +19,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -230,8 +231,7 @@ export default function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button
-                variant="ghost"
+              <div 
                 className="flex items-center gap-2 px-2 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
               >
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-primary font-mono text-xs font-semibold text-sidebar-primary-foreground">
@@ -239,23 +239,25 @@ export default function Header() {
                 </span>
                 <span className="hidden text-sm md:inline">{displayName}</span>
                 <ChevronDown className="hidden h-3.5 w-3.5 md:block" strokeWidth={2} />
-              </Button>
+              </div>
             }
           />
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>
-              <span className="text-sm font-medium">{displayName}</span>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="text-sm font-medium">{displayName}</span>
+              </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={logout}
-            >
-              Sign out
-            </DropdownMenuItem>
+            </DropdownMenuGroup>
+            
+            <DropdownMenuGroup>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={logout}
+              >
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
